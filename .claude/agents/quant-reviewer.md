@@ -28,9 +28,8 @@ Check, in this order:
    acknowledged. Z-scores use the entity's own baseline excluding the current bucket.
 5. **Language.** User-facing strings never phrase historical averages as predictions. "No measurable
    edge" is reported where that is the result.
-6. **Exposure math.** Hop attenuation (1.0 / 0.5 / 0.25), two-hop cap, undisclosed weights flagged,
-   look-through weights normalised, no double counting when the same company appears via several paths
-   unless intentionally summed.
+6. **Exposure math.** Look-through weights normalised, no double counting when the same company
+   appears via several paths unless intentionally summed.
 
 If tests exist in tests/pit/, run them with `uv run pytest tests/pit -q` and include the result.
 

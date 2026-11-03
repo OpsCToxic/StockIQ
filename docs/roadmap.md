@@ -12,34 +12,35 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done
 ## Phase 0 — Harness + skeleton
 - [x] Claude Code harness (CLAUDE.md, agents, skills, commands, hooks)
 - [x] Docker Compose (Postgres+Timescale+pgvector, Redis, MinIO), Makefile, CI
-- [ ] Alembic initialised, first empty migration
+- [x] Alembic initialised, first empty migration (applied locally, revision 0001)
 - [ ] Apply for Reddit Data API access now (2–4 week approval wait)
 - [ ] Decide market-data provider → ADR
 - [ ] Decide brokerage aggregator → ADR
+- [ ] Request E*TRADE sandbox key; resolve open questions in [ADR 0002](decisions/0002-etrade-sign-on.md)
 **Gate:** `make up && make lint test` green in CI.
 
 ## Phase 1 — Foundation: holdings + look-through
 - [ ] Core tables: entity, entity_alias, account, holding, lot, document, price_bar
 - [ ] Entity master seed: SEC company tickers + OpenFIGI
 - [ ] Brokerage import: CSV first, aggregator second
+- [ ] E*TRADE sign-on connector with daily login (read endpoints only)
 - [ ] N-PORT fund holdings connector (issuer daily files where available)
 - [ ] Daily prices connector
 - [ ] Exposure by company / sector / country through ETFs
 **Ships:** exposure through your ETFs.
 **Gate:** look-through totals reconcile to within 1% of real portfolio value.
 
-## Phase 2 — Supply-chain graph + Exposure X-ray
-- [ ] Filing ingestion (10-K/10-Q/8-K), section splitter
-- [ ] Chunk filter (keyword + embedding)
-- [ ] LLM extraction with provenance (edge + edge_evidence)
+## Phase 2 — Exposure X-ray
+Supply-chain links and filing extraction were removed; see [ADR 0001](decisions/0001-remove-supply-chain-graph.md).
 - [ ] Resolver + review queue
-- [ ] 2-hop propagation, concentration flags, Herfindahl
+- [ ] Concentration flags, Herfindahl
 - [ ] Sankey view
-- [ ] Gold set: ~200 hand-labelled passages in tests/gold/
+- [ ] Labelled ETF-holdings sample in tests/gold/resolution/
 **Ships:** "what you're really exposed to".
-**Gate:** extraction precision ≥ 90% on the gold set.
+**Gate:** entity-resolution precision on ETF holdings ≥ 90% on a labelled sample.
 
 ## Phase 3 — Attribution + news feed
+- [ ] Filing ingestion (10-K/10-Q/8-K) as documents for attribution
 - [ ] Factor returns (French library), rolling loadings
 - [ ] Daily attribution with look-through roll-up
 - [ ] News ingest / cluster / tag / type
@@ -59,7 +60,7 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done
 **Gate:** point-in-time tests pass (no look-ahead in any event-study query).
 
 ## Phase 6 — Smart-money signals
-- [ ] Form 4, 13F, short interest, congressional disclosures; cluster + propagation logic
+- [ ] Form 4, 13F, short interest, congressional disclosures; cluster logic
 **Gate:** historical lead/lag results recorded per signal type on your holdings.
 
 ## Phase 7 — Social sentiment

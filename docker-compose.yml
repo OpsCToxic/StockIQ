@@ -18,7 +18,7 @@ services:
     volumes: [redis-data:/data]
 
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: server /data --console-address ":9001"
     # MINIO_ROOT_USER / MINIO_ROOT_PASSWORD come from .env (see .env.example)
     env_file: .env

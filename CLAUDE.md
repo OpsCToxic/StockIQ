@@ -7,13 +7,14 @@ The shared rules above apply. This section covers Claude-only tooling in `.claud
 
 **Skills** — load before the matching work:
 - `new-connector`: anything under `src/stockiq/connectors/`
-- `llm-extraction` + `entity-resolution`: filings → edges, resolver, entity tagging
+- `entity-resolution`: resolver, entity tagging
+- `llm-explanations`: LLM explanations, relevance checks, classification
 - `point-in-time` + `event-study`: time series, backtests, event studies, lead/lag tests
 
 **Subagents**
 - `quant-reviewer`: after changing analytics or time-series SQL (look-ahead, survivorship, small-n)
 - `architecture-reviewer`: before merging a feature or planning cross-package work
-- `connector-engineer`, `extraction-engineer`: delegate connector and extraction work
+- `connector-engineer`: delegate connector work
 
 **Commands**: `/phase`, `/gate <n>`, `/new-connector <source>`, `/review`, `/adr <title>`
 

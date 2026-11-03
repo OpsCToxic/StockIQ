@@ -1,7 +1,7 @@
 [project]
 name = "stockiq"
 version = "0.1.0"
-description = "Personal portfolio intelligence platform: supply-chain exposure graph, attribution, timeline, sentiment, smart money, alerts"
+description = "Personal portfolio intelligence platform: look-through exposure graph, attribution, timeline, sentiment, smart money, alerts"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",

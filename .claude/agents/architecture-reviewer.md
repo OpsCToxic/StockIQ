@@ -19,8 +19,8 @@ Check:
 - **Connectors:** `fetch(since)` / `parse(raw)`, raw written to object storage before parsing,
   idempotent upsert on source ID, rate limiting and retries via connectors/base, cursor checkpointing,
   fixture-based parse test.
-- **Graph:** every edge write has evidence (doc, section, verbatim span, URL, extractor version,
-  confidence); `weight_disclosed` set correctly; validity windows set.
+- **Graph:** every edge write has evidence (doc and URL, plus section and verbatim span where the
+  source is text); validity windows set.
 - **Storage:** schema changes come with an Alembic migration; time series are hypertables.
 - **Terms & secrets:** SEC User-Agent and ≤10 req/s, Reddit non-commercial, news stored as summary +
   link, no secrets in code or logs, read-only brokerage scopes.

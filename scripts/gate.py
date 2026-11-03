@@ -8,7 +8,17 @@ import sys
 
 AUTOMATED: dict[int, list[list[str]]] = {
     0: [["python3", "scripts/check_invariants.py"]],
-    2: [["python", "-m", "stockiq.graph.eval", "--min-precision", "0.90"]],
+    2: [
+        [
+            "python",
+            "-m",
+            "stockiq.entities.eval",
+            "--source",
+            "etf_holdings",
+            "--min-precision",
+            "0.90",
+        ]
+    ],
     5: [["pytest", "-q", "tests/pit"]],
     7: [["python", "-m", "stockiq.entities.eval", "--source", "social", "--min-precision", "0.90"]],
 }

@@ -5,9 +5,9 @@ Claude-specific tooling lives in CLAUDE.md.
 
 ## Project
 
-Personal tool that shows what actually affects Cameron's money, including hidden connections.
-Holdings (and everything inside ETFs) are linked to suppliers, customers, and geographies in a
-**supply-chain graph**. Every feature reads from that graph.
+Personal tool that shows what actually affects Cameron's money, including exposure hidden inside ETFs.
+Holdings (and everything inside ETFs) are linked to companies, sectors, and countries in an
+**exposure graph**. Every feature reads from that graph.
 
 Full design: @docs/architecture.md · Build order and gates: @docs/roadmap.md
 
@@ -21,9 +21,8 @@ contribution sizing, multi-user SaaS. Do not build these unless asked.
 ## Non-negotiable invariants
 These are the rules that make the numbers trustworthy. Break one only if Cameron explicitly says so.
 
-1. **No edge without evidence.** Every graph edge has an `edge_evidence` row: doc id, section,
-   verbatim span, URL, extractor version, confidence. Undisclosed weights are stored with
-   `weight_disclosed = false` and shown as "undisclosed", never hidden.
+1. **No edge without evidence.** Every graph edge has an `edge_evidence` row citing its source:
+   doc id and URL, plus section and verbatim span where the source is text.
 2. **Point-in-time.** Every fact stores when it became known (`known_at` / `published_at` /
    `ingested_at`) separately from when it happened. Backtests, event studies, lead/lag tests and
    attribution query by known-time only. No look-ahead.
@@ -42,15 +41,16 @@ These are the rules that make the numbers trustworthy. Break one only if Cameron
    Reddit is non-commercial free tier. Store news summaries + links, not full articles. No HTML
    scraping where terms forbid it. Brokerage scopes are read-only. Secrets live in `.env`
    (git-ignored) or a secrets manager — never in code, the DB in plaintext, or logs.
-8. **LLM cost control.** LLM calls run only on pre-filtered chunks, are cached by
-   `document hash + extractor version`, and use prompt caching for repeated instructions.
+8. **LLM cost control.** LLM calls run only on pre-filtered items, are cached by
+   `document hash + prompt version`, and use prompt caching for repeated instructions.
    High-volume classification uses the small classifier, not the LLM.
 
 ## Stack
 Python 3.12 (uv) · FastAPI + Pydantic · Dagster (batch) · async workers on Redis Streams ·
 Postgres 16 + TimescaleDB + pgvector · Redis · MinIO/S3 · pandas/Polars, statsmodels ·
 Hugging Face (FinBERT-style), sentence-transformers · Claude API · Docker Compose.
-Frontend is undecided (match the trading platform: React or Vue) — ask before choosing.
+Frontend: React + TypeScript (ADR 0003), in `frontend/` once the first page is built. Backend stays
+Python; no Go.
 
 ## Layout
 ```
@@ -58,13 +58,13 @@ src/stockiq/
   core/        config, db session, logging, event bus, shared types
   connectors/  one package per source; shared rate limit/retry/cursor lib in connectors/base.py
   entities/    entity master, alias table, resolver, review queue
-  graph/       edge model, filing extraction pipeline, exposure propagation
+  graph/       edge model, look-through exposure
   modules/     exposure/, attribution/, timeline/, sentiment/, smart_money/, news/  (signal writers)
   alerts/      scoring, dedupe, tiers, scheduling, delivery adapters
   api/         FastAPI app, routers, websocket stream
   orchestration/ Dagster definitions
 migrations/    Alembic
-tests/         unit/, integration/, pit/ (point-in-time tests), gold/ (extraction gold set)
+tests/         unit/, integration/, pit/ (point-in-time tests), gold/ (labelled resolution samples)
 docs/          architecture.md, roadmap.md, decisions/ (ADRs)
 ```
 
@@ -84,7 +84,7 @@ make gate PHASE=N  # run the phase gate checks listed in docs/roadmap.md
   out-of-phase in the roadmap's parking lot rather than building it.
 - Schema changes go through an Alembic migration; never edit tables by hand or edit a committed migration.
 - Never edit `.env`, `secrets/`, or anything under `data/raw/` (raw payloads are immutable).
-- Significant design choices (provider picks, schema shape, graduating to Neo4j/Kafka) get an
+- Significant design choices (provider picks, schema shape, graduating to Kafka) get an
   ADR in `docs/decisions/` using the template there.
 - Connectors follow the contract in `docs/architecture.md` (raw first, idempotent upsert, rate limits).
 - Every connector has a parse test against a saved raw fixture in `tests/fixtures/`.
@@ -92,4 +92,4 @@ make gate PHASE=N  # run the phase gate checks listed in docs/roadmap.md
 - Run `make lint test` (includes `scripts/check_invariants.py`) before saying work is done.
   Report failures honestly.
 - Open questions from the architecture (market-data provider, brokerage aggregator, dashboard
-  placement, 13F watchlist, hop cap) are Cameron's calls — ask, don't decide.
+  placement, 13F watchlist) are Cameron's calls — ask, don't decide.
