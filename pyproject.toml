@@ -1,0 +1,63 @@
+[project]
+name = "stockiq"
+version = "0.1.0"
+description = "Personal portfolio intelligence platform: supply-chain exposure graph, attribution, timeline, sentiment, smart money, alerts"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "sqlalchemy>=2.0",
+  "psycopg[binary]>=3.2",
+  "alembic>=1.13",
+  "redis>=5.0",
+  "httpx>=0.27",
+  "tenacity>=8.3",
+  "boto3>=1.34",
+  "polars>=1.0",
+  "pandas>=2.2",
+  "numpy>=1.26",
+  "statsmodels>=0.14",
+  "anthropic>=0.40",
+  "structlog>=24.1",
+]
+
+[project.optional-dependencies]
+nlp = ["sentence-transformers>=3.0", "transformers>=4.44", "torch>=2.3"]
+orchestration = ["dagster>=1.8", "dagster-webserver>=1.8"]
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5", "mypy>=1.10", "respx>=0.21"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stockiq"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DTZ", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "DTZ"]
+"scripts/**" = ["S603", "S607", "E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = ["integration: needs docker compose services", "pit: point-in-time correctness"]
+addopts = "-m 'not integration'"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["stockiq"]

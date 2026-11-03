@@ -1,0 +1,31 @@
+services:
+  db:
+    # TimescaleDB HA image ships Postgres 16 with timescaledb + pgvector
+    image: timescale/timescaledb-ha:pg16
+    # POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB come from .env (see .env.example)
+    env_file: .env
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [db-data:/home/postgres/pgdata/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stockiq}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: [redis-data:/data]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    # MINIO_ROOT_USER / MINIO_ROOT_PASSWORD come from .env (see .env.example)
+    env_file: .env
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: [minio-data:/data]
+
+volumes:
+  db-data:
+  redis-data:
+  minio-data:
