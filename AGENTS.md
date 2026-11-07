@@ -85,11 +85,12 @@ make gate PHASE=N  # run the phase gate checks listed in docs/roadmap.md
 - Schema changes go through an Alembic migration; never edit tables by hand or edit a committed migration.
 - Never edit `.env`, `secrets/`, or anything under `data/raw/` (raw payloads are immutable).
 - Significant design choices (provider picks, schema shape, graduating to Kafka) get an
-  ADR in `docs/decisions/` using the template there.
+  ADR in `docs/decisions/` using the template there. `docs/architecture.md` is the source of
+  truth for the design: an accepted ADR that changes it updates that file in the same change.
 - Connectors follow the contract in `docs/architecture.md` (raw first, idempotent upsert, rate limits).
 - Every connector has a parse test against a saved raw fixture in `tests/fixtures/`.
   Every analytics query that touches time has a test in `tests/pit/`.
 - Run `make lint test` (includes `scripts/check_invariants.py`) before saying work is done.
   Report failures honestly.
-- Open questions from the architecture (market-data provider, brokerage aggregator, dashboard
+- Open questions from the architecture (brokerage aggregator, dashboard
   placement, 13F watchlist) are Cameron's calls — ask, don't decide.

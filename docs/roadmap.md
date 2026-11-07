@@ -13,16 +13,17 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Claude Code harness (CLAUDE.md, agents, skills, commands, hooks)
 - [x] Docker Compose (Postgres+Timescale+pgvector, Redis, MinIO), Makefile, CI
 - [x] Alembic initialised, first empty migration (applied locally, revision 0001)
-- [ ] Apply for Reddit Data API access now (2–4 week approval wait)
-- [ ] Decide market-data provider → ADR
-- [ ] Decide brokerage aggregator → ADR
+- [x] Reddit source → [ADR 0004](decisions/0004-arctic-shift-reddit-source.md): Arctic Shift API (accepted); not applying for the official Reddit Data API
+- [x] Market-data provider → [ADR 0005](decisions/0005-massive-market-data.md): Massive free for the PoC; upgrade when history is the limit
+- [ ] Create a Massive account and API key (put it in `.env`); confirm the free plan's license and whether dividends are included
+- [~] Brokerage aggregator → ADR: **on hold** (Cameron, 2026-11-02). Proof of concept uses E*TRADE direct + CSV. Candidates if resumed: SnapTrade (lean), Plaid Investments
 - [ ] Request E*TRADE sandbox key; resolve open questions in [ADR 0002](decisions/0002-etrade-sign-on.md)
 **Gate:** `make up && make lint test` green in CI.
 
 ## Phase 1 — Foundation: holdings + look-through
 - [ ] Core tables: entity, entity_alias, account, holding, lot, document, price_bar
 - [ ] Entity master seed: SEC company tickers + OpenFIGI
-- [ ] Brokerage import: CSV first, aggregator second
+- [ ] Brokerage import: CSV first (aggregator on hold, see Phase 0)
 - [ ] E*TRADE sign-on connector with daily login (read endpoints only)
 - [ ] N-PORT fund holdings connector (issuer daily files where available)
 - [ ] Daily prices connector
@@ -75,3 +76,6 @@ Scenario/what-if engine · diversification/reallocation suggestions · thesis tr
 
 ## Parking lot
 Out-of-phase ideas noted while working go here instead of being built.
+
+- Arctic Shift connector (`connectors/arctic_shift/`) for Reddit, per ADR 0004. Needs Phase 1's
+  entity and document tables. Fixtures already in `tests/fixtures/arctic_shift/`.

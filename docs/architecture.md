@@ -1,8 +1,9 @@
 # Portfolio Intelligence Platform — Architecture
 
-Source of truth: the Claude Doc "Portfolio Intelligence Platform — Architecture"
-(https://claude.ai/artifact/MDKfJRebgEAqxDo1ad8T9i), 2026-11-01. This is the repo copy for agents.
-If they disagree, ask Cameron which wins and update the other.
+This file is the source of truth for the architecture. It started as the Claude Doc "Portfolio
+Intelligence Platform — Architecture" (https://claude.ai/artifact/MDKfJRebgEAqxDo1ad8T9i, 2026-11-01).
+That doc is now an out-of-date snapshot: do not edit it, and if it disagrees with this file, this
+file wins. An accepted ADR that changes the design updates this file in the same change.
 
 ## Overview
 
@@ -22,8 +23,8 @@ countries. Every feature reads from that graph.
 **Non-goals for v1:** trade execution, scenario/what-if engine, reallocation suggestions,
 contribution sizing, multi-user SaaS. The design leaves room for all of them.
 
-**Operating constraint:** personal, non-commercial use. Keeps Reddit on its free tier and avoids
-redistribution licensing for market data.
+**Operating constraint:** personal, non-commercial use. Reddit data comes from the free Arctic Shift
+community archive (ADR 0004), not Reddit's own API, and market data avoids redistribution licensing.
 
 ## System architecture
 
@@ -57,11 +58,11 @@ emits a normalized event. Raw-first means history can be re-parsed when a parser
 | SEC EDGAR 13F | Institutional long positions | Quarterly, ≤45 days after quarter end | Free | Long US equity only, managers > $100M |
 | FINRA | Short interest | Twice monthly | Free | Pair with daily short-volume data |
 | House Clerk / Senate eFD | Congressional trades | Up to ~45 days | Free | Some PDFs scanned; amounts are ranges |
-| Market data API (Polygon, Tiingo, …) | Daily/intraday prices, corporate actions | EOD + intraday | Paid tier for reliable history | Choose early; drives the factor model |
+| Massive (formerly Polygon; ADR 0005) | Daily prices, corporate actions | EOD; one grouped-daily call per date covers all tickers | Free: 5 calls/min, 2 years of history; paid tiers for 5–10+ years | Store unadjusted prices + splits/dividends and adjust ourselves (point-in-time); upgrade when history is the limit |
 | Kenneth French data library | Factor returns | Monthly / daily | Free | Used by attribution |
 | Calendars | Earnings, ex-div, FOMC, CPI, jobs, OPEX, index rebalances | Daily refresh | Mostly free + market-data API | Earnings dates shift; re-check daily |
 | News API (Benzinga, Polygon news, RSS) | Headlines with tickers | Stream / 5-min poll | Paid for full text | Store URL + summary, not full articles |
-| Reddit Data API | Investing subreddit posts/comments | Poll 1–5 min | Free: 100 QPM, non-commercial, approval 2–4 weeks | No date-range search: build own history |
+| Arctic Shift API (community Reddit archive; ADR 0004) | Investing subreddit posts/comments | Poll ~15 min, page by `after` | Free, no key; dynamic rate limit, no uptime guarantee; terms unstated | New items lag minutes; `score` / `num_comments` final after ~36h, so re-fetch; keep raw for history; honour removals |
 | StockTwits API | Cashtag streams, bull/bear tags | Poll | Rate-limited | Bull/bear tags = free sentiment labels |
 | Hacker News (Firebase API) | Tech discussion | Poll | Free | Tech names |
 | Earnings call transcripts | Management language | Quarterly | Usually paid | Optional, later phase |
@@ -225,7 +226,7 @@ AND/OR, Cooldown), Sinks (Alert, Digest, Webhook). Nodes call the same API.
 ## Security, compliance, cost
 - Secrets in a secrets manager or SOPS-encrypted env; never plaintext in DB or logs. Read-only brokerage scopes.
 - Expose over Tailscale or behind an auth proxy. Encrypt DB backups.
-- Respect API terms (Reddit non-commercial, market-data no redistribution, SEC User-Agent + rate limits). No prohibited scraping. Store summaries + links, not articles.
+- Respect API terms (Reddit content personal and non-commercial; Arctic Shift states no terms, see ADR 0004; market-data no redistribution, SEC User-Agent + rate limits). No prohibited scraping. Store summaries + links, not articles.
 - LLM only on pre-filtered items, cached by document hash + prompt version. Monthly budget caps per paid API.
 
 ## Risks
@@ -240,7 +241,7 @@ AND/OR, Cooldown), Sinks (Alert, Digest, Webhook). Nodes call the same API.
 | LLM cost creep | Hash-keyed caching, pre-filtering, budget alerts |
 
 ## Open questions (Cameron decides)
-- Market-data provider (drives intraday availability and attribution history).
+- ~~Market-data provider~~ Decided: Massive free for the PoC (ADR 0005).
 - Brokerage aggregator, and broker support.
 - E*TRADE read-only access: if no read-only key exists, whether to approve an exception (ADR 0002).
 - Dashboard as a separate app or pages inside the trading platform.

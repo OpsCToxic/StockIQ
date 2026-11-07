@@ -22,7 +22,10 @@ What E*TRADE's API docs say:
 | Aggregator | Unattended sync; multiple brokers | Third party holds access | Paid per connection |
 
 ## Decision
-Add E*TRADE sign-on alongside CSV import and the aggregator. The aggregator choice stays open.
+Add E*TRADE sign-on alongside CSV import and the aggregator. The aggregator choice stays open and
+is on hold (Cameron, 2026-11-02), so E*TRADE direct and CSV are the only sources for the proof of
+concept. The E*TRADE developer platform is stated to be free (developer.etrade.com FAQ; confirm
+current terms when requesting keys).
 
 ## Consequences
 - Add an E*TRADE connector in Phase 1, following the standard contract: raw first, idempotent upsert.
