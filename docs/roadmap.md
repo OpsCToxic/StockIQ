@@ -33,10 +33,10 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped
 
 ## Phase 2 — Exposure X-ray
 Supply-chain links and filing extraction were removed; see [ADR 0001](decisions/0001-remove-supply-chain-graph.md).
-- [ ] Resolver + review queue
-- [ ] Concentration flags, Herfindahl
-- [ ] Sankey view
-- [ ] Labelled ETF-holdings sample in tests/gold/resolution/
+- [~] Resolver + review queue. Done: cascade (identifier, ticker, exact name, guarded trigram fuzzy) with confidence, review queue and CLI (`python -m stockiq.entities.review`), wired into N-PORT; VOO 98% of net assets resolved. Open: review page in the UI, LLM disambiguation step, precision gate
+- [x] Concentration flags, Herfindahl (`python -m stockiq.xray`; Tesla 99.1% economic, effective number of companies 2.2). Signal rows wait for the Phase 4 table
+- [~] Sankey view. Done: API (`GET /portfolio/exposure` with Sankey graph, flags and caveats; `GET /edges/{id}/evidence`; run `uvicorn stockiq.api.app:app`). Open: the React page, blocked on Cameron's call: separate `frontend/` app or pages in the trading platform (ADR 0003)
+- [~] Labelled ETF-holdings sample in tests/gold/resolution/. Done: 150-row sample with silver labels (OpenFIGI CUSIP to ticker to SEC company) and the evaluation (`python -m stockiq.entities.eval --source etf_holdings`): precision 100% on the 127 links scored. Open: Cameron reviews the labels (`reviewed` column) before the gate means anything
 **Ships:** "what you're really exposed to".
 **Gate:** entity-resolution precision on ETF holdings ≥ 90% on a labelled sample.
 
