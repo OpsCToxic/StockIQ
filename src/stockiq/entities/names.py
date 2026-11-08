@@ -9,21 +9,36 @@ import re
 
 from sqlalchemy import Connection, text
 
-NAME_ALIAS_SOURCE = "normalized_entity_name:v2"
+NAME_ALIAS_SOURCE = "normalized_entity_name:v4"
 
 _SUFFIXES = {
     "inc", "incorporated", "corp", "corporation", "co", "company", "ltd", "limited",
-    "plc", "nv", "sa", "ag", "llc", "lp", "se",
+    "plc", "nv", "sa", "ag", "llc", "lp", "se", "cos", "companies",
+}  # fmt: skip
+
+# Words that say what kind of business or entity this is, not which one. Two names that share
+# only these are not evidence of the same company ("Hartford Financial Services Group" vs
+# "PNC Financial Services Group"). Used by the fuzzy matcher's guard.
+GENERIC = _SUFFIXES | {
+    "and", "of", "the", "group", "holdings", "holding", "financial", "services", "industries",
+    "international", "technologies", "technology", "systems", "partners", "trust", "bancorp",
+    "bank", "global", "american", "united", "national", "first", "resources", "energy",
+    "capital", "enterprises", "solutions", "brands", "sciences", "pharmaceuticals",
+    "therapeutics", "entertainment", "communications", "networks", "software", "materials",
+    "products", "stores", "foods", "worldwide", "corporate", "fund", "etf", "index",
 }  # fmt: skip
 
 
-# Registry and fund-filing tags: "Corp /DE/", "Corp /NEW", "Co/The". Only a trailing "/xx/" state
-# code or the words "new", "old", "the" after a slash; a slash inside a name ("A/S") is kept.
-_TAIL = re.compile(r"\s*/\s*(?:the|new|old|[a-z]{2})\s*/?\s*$")
+# Registry and fund-filing tags: "Corp /DE/", "Corp \DE\", "Corp /NEW", "Co/The". Only a trailing
+# two-letter state code or the words "new", "old", "the" after a slash or backslash; a slash
+# inside a name ("A/S") is kept.
+_TAIL = re.compile(r"\s*[/\\]\s*(?:the|new|old|[a-z]{2})\s*[/\\]?\s*$")
 
 
 def normalize_name(name: str) -> str:
     s = _TAIL.sub("", name.casefold()).replace("&", " and ")
+    # Dotted initials collapse: "N.V." -> "nv", "W.W. Grainger" -> "ww grainger".
+    s = re.sub(r"\b([a-z])\.(?=\s|$|[a-z]\.)", r"\1", s)
     s = re.sub(r"['’]", "", s)  # McDonald's -> mcdonalds, not "mcdonald s"
     s = re.sub(r"[^a-z0-9]+", " ", s).strip()
     tokens = s.split()
@@ -32,6 +47,11 @@ def normalize_name(name: str) -> str:
     while len(tokens) > 1 and tokens[-1] in _SUFFIXES:
         tokens.pop()
     return " ".join(tokens)
+
+
+def distinctive_tokens(normalized: str) -> set[str]:
+    """The words in a normalised name that actually identify the company."""
+    return {t for t in normalized.split() if t not in GENERIC}
 
 
 def ensure_name_aliases(conn: Connection) -> int:

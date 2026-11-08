@@ -23,7 +23,9 @@ from stockiq.connectors.base import BaseConnector, Cursor, RawPayload, StoredPay
 from stockiq.connectors.nport.models import NportHolding, NportReport
 from stockiq.connectors.sec_tickers.client import sec_client
 from stockiq.core.config import Settings
-from stockiq.entities.names import ensure_name_aliases, normalize_name
+from stockiq.entities.names import ensure_name_aliases
+from stockiq.entities.resolver import ACCEPT, LEARNED_SOURCE, Mention, resolve
+from stockiq.entities.review import enqueue
 
 NY = ZoneInfo("America/New_York")
 BROWSE_URL = "https://www.sec.gov/cgi-bin/browse-edgar"
@@ -33,10 +35,6 @@ NS = "{http://www.sec.gov/edgar/nport}"
 ATOM = "{http://www.w3.org/2005/Atom}"
 EQUITY_CATS = {"EC", "EP"}
 RATE_WORDS = re.compile(r"sofr|libor|fed ?funds|overnight|interest rate|euribor|sonia", re.I)
-METHOD_IDENTIFIER, METHOD_NAME = "identifier", "normalized_name"
-METHOD_SWAP_REF = "swap_reference_ticker"
-METHOD_LEARNED, LEARNED_SOURCE = "learned_name_identifier", "nport_name_match"
-CONF_IDENTIFIER, CONF_NAME = Decimal("1.0"), Decimal("0.95")
 
 
 def _dec(el: Element | None, tag: str) -> Decimal | None:
@@ -258,7 +256,7 @@ class NportConnector(BaseConnector[NportReport]):
                 "ta": rpt.total_assets,
             },
         )
-        resolved = [(h, *self._resolve(conn, h, rpt.known_at)) for h in rpt.holdings]
+        resolved = [(h, *self._resolve(conn, h, rpt.known_at, stored.doc_id)) for h in rpt.holdings]
         conn.execute(
             text(
                 """
@@ -309,62 +307,24 @@ class NportConnector(BaseConnector[NportReport]):
         self._write_edges(conn, stored, rpt, fund_id, resolved)
 
     def _resolve(
-        self, conn: Connection, h: NportHolding, at: datetime
+        self, conn: Connection, h: NportHolding, at: datetime, doc_id: int
     ) -> tuple[int | None, str | None, Decimal | None]:
-        """Swap reference ticker, else exact identifier (CUSIP, ISIN, LEI), else name."""
+        """Resolve one reported line. Swaps resolve by their reference ticker; everything else by
+        identifier, then name. Weak matches are queued for review, equity lines only (cash and
+        T-bills are not worth a human's time)."""
+        name = None if h.name.strip().upper() in ("", "N/A") else h.name
         if h.swap_ref:
-            ids = (
-                conn.execute(
-                    text(
-                        "SELECT DISTINCT entity_id FROM entity_alias "
-                        "WHERE kind = 'ticker' AND alias = :t AND valid_to IS NULL"
-                    ),
-                    {"t": h.swap_ref},
-                )
-                .scalars()
-                .all()
-            )
-            if len(ids) == 1:
-                return ids[0], METHOD_SWAP_REF, CONF_NAME
-            return None, None, None
-        for kind, value in (("cusip", h.cusip), ("isin", h.isin)):
-            if value and value.strip("0N/A "):
-                rows = conn.execute(
-                    text(
-                        "SELECT DISTINCT entity_id, source FROM entity_alias "
-                        "WHERE kind = :k AND alias = :v AND valid_to IS NULL"
-                    ),
-                    {"k": kind, "v": value},
-                ).all()
-                if len({r.entity_id for r in rows}) == 1:
-                    # An identifier we learned from a name match keeps the name match's
-                    # confidence, so a wrong name match is not laundered into a 1.0 edge.
-                    if all(r.source == LEARNED_SOURCE for r in rows):
-                        return rows[0].entity_id, METHOD_LEARNED, CONF_NAME
-                    return rows[0].entity_id, METHOD_IDENTIFIER, CONF_IDENTIFIER
-        if h.lei:
-            ids = (
-                conn.execute(text("SELECT id FROM entity WHERE lei = :l"), {"l": h.lei})
-                .scalars()
-                .all()
-            )
-            if len(ids) == 1:
-                return ids[0], METHOD_IDENTIFIER, CONF_IDENTIFIER
-        norm = normalize_name(h.name)
-        if norm:
-            ids = (
-                conn.execute(
-                    text(
-                        "SELECT DISTINCT entity_id FROM entity_alias "
-                        "WHERE kind = 'name' AND alias = :n AND valid_to IS NULL"
-                    ),
-                    {"n": norm},
-                )
-                .scalars()
-                .all()
-            )
-            if len(ids) == 1:
-                return ids[0], METHOD_NAME, CONF_NAME
+            mention = Mention(ticker=h.swap_ref)
+        else:
+            mention = Mention(name=name, cusip=h.cusip, isin=h.isin, lei=h.lei)
+        result = resolve(conn, mention, at)
+        is_equity = h.asset_cat in EQUITY_CATS and h.payoff_profile == "Long"
+        # An equity line nothing matched still goes to the queue (no candidates), so a
+        # reviewer can find a renamed company by hand instead of it staying unresolved.
+        if (result.needs_review or not result.accepted) and (is_equity or h.swap_ref):
+            enqueue(conn, "nport", f"doc:{doc_id}:seq:{h.seq}", mention, result)
+        if result.accepted:
+            return result.entity_id, result.method, result.confidence
         return None, None, None
 
     def _remember_identifiers(
@@ -373,10 +333,13 @@ class NportConnector(BaseConnector[NportReport]):
         resolved: list[tuple[NportHolding, int | None, str | None, Decimal | None]],
         at: datetime,
     ) -> None:
-        """A confident name match teaches us the CUSIP/ISIN, so the next run matches exactly."""
+        """A confident (>= 0.9) name match teaches us the CUSIP/ISIN, so the next run matches by
+        identifier. A provisional fuzzy match teaches nothing until a reviewer accepts it."""
         rows = []
-        for h, cid, method, _ in resolved:
-            if cid is None or method not in (METHOD_NAME, METHOD_LEARNED) or h.swap_ref:
+        for h, cid, method, conf in resolved:
+            if cid is None or h.swap_ref or conf is None or conf < ACCEPT:
+                continue
+            if method not in ("exact_name", "identifier:cusip:learned", "identifier:isin:learned"):
                 continue
             for kind, value in (("cusip", h.cusip), ("isin", h.isin)):
                 if value:
@@ -386,11 +349,11 @@ class NportConnector(BaseConnector[NportReport]):
                 text(
                     """
                     INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at)
-                    VALUES (:e, :a, :k, 'nport_name_match', :at, :at)
+                    VALUES (:e, :a, :k, :src, :at, :at)
                     ON CONFLICT (entity_id, alias, kind, valid_from) DO NOTHING
                     """
                 ),
-                rows,
+                [{**r, "src": LEARNED_SOURCE} for r in rows],
             )
 
     def _write_synthetic_edges(

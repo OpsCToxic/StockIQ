@@ -30,6 +30,23 @@ class NotLookedThrough:
     label: str
     value: Decimal
     reason: str
+    holding_id: int = 0  # the held fund this remainder belongs to
+    holding: str = ""  # its short label (ticker)
+
+
+@dataclass
+class ExposurePath:
+    """One flow of value from a holding to a company: a direct holding, a fund's equity line, or
+    swap exposure. `edge_id` points at the graph edge whose evidence backs it (None for a direct
+    holding, which comes from the imported positions file)."""
+
+    holding_id: int
+    holding: str
+    company_id: int
+    value: Decimal
+    kind: str  # "direct" | "fund" | "swap"
+    edge_id: int | None = None
+    confidence: Decimal | None = None
 
 
 @dataclass
@@ -48,6 +65,7 @@ class Exposure:
     by_division: dict[str, Decimal] = field(default_factory=dict)  # SIC division
     not_looked_through: list[NotLookedThrough] = field(default_factory=list)
     fund_report_dates: dict[str, date] = field(default_factory=dict)
+    paths: list[ExposurePath] = field(default_factory=list)
 
     @property
     def company_total(self) -> Decimal:
@@ -127,10 +145,14 @@ def look_through(conn: Connection, as_of: datetime, account_id: int | None = Non
                     f"{p.ticker or p.name} has no broker market value; re-import the positions CSV"
                 )
             result.total_value += p.market_value
+            label = p.ticker or p.name
             if p.type == "fund":
-                _add_fund(conn, result, p.security_id, p.name, p.market_value, as_of)
+                _add_fund(conn, result, p.security_id, p.name, label, p.market_value, as_of)
             else:
                 result.names[p.security_id] = p.name
+                result.paths.append(
+                    ExposurePath(p.security_id, label, p.security_id, p.market_value, "direct")
+                )
                 _add(result.by_company, p.security_id, p.market_value)
                 _add(result.by_country, p.country or "Unknown (direct holding)", p.market_value)
     if result.cash:
@@ -170,7 +192,13 @@ def _add[K](bucket: dict[K, Decimal], key: K, value: Decimal) -> None:
 
 
 def _add_fund(
-    conn: Connection, out: Exposure, fund_id: int, name: str, value: Decimal, as_of: datetime
+    conn: Connection,
+    out: Exposure,
+    fund_id: int,
+    name: str,
+    label: str,
+    value: Decimal,
+    as_of: datetime,
 ) -> None:
     # One report version per fund, chosen once and used for companies and countries alike.
     report = conn.execute(
@@ -185,7 +213,7 @@ def _add_fund(
     ).first()
     if report is None:
         out.not_looked_through.append(
-            NotLookedThrough(name, value, "no fund holdings filing known yet")
+            NotLookedThrough(name, value, "no fund holdings filing known yet", fund_id, label)
         )
         out.by_country["Unknown (no fund filing known)"] = (
             out.by_country.get("Unknown (no fund filing known)", ZERO) + value
@@ -196,7 +224,8 @@ def _add_fund(
     edges = conn.execute(
         text(
             """
-            SELECT e.dst_id, c.name, e.weight FROM edge e JOIN entity c ON c.id = e.dst_id
+            SELECT e.id, e.dst_id, c.name, e.weight, e.confidence
+            FROM edge e JOIN entity c ON c.id = e.dst_id
             WHERE e.src_id = :f AND e.type = 'CONTAINS'
               AND e.valid_from = CAST(:rd AS timestamptz) AND e.known_at = :k
             """
@@ -206,11 +235,15 @@ def _add_fund(
     covered = sum((e.weight for e in edges), ZERO)
     for e in edges:
         out.names[e.dst_id] = e.name
+        out.paths.append(
+            ExposurePath(fund_id, label, e.dst_id, value * e.weight, "fund", e.id, e.confidence)
+        )
         _add(out.by_company, e.dst_id, value * e.weight)
     synthetic = conn.execute(
         text(
             """
-            SELECT e.dst_id, c.name, e.weight FROM edge e JOIN entity c ON c.id = e.dst_id
+            SELECT e.id, e.dst_id, c.name, e.weight, e.confidence
+            FROM edge e JOIN entity c ON c.id = e.dst_id
             WHERE e.src_id = :f AND e.type = 'SYNTHETIC'
               AND e.valid_from = CAST(:rd AS timestamptz) AND e.known_at = :k
             """
@@ -219,6 +252,9 @@ def _add_fund(
     ).all()
     for e in synthetic:
         out.names[e.dst_id] = e.name
+        out.paths.append(
+            ExposurePath(fund_id, label, e.dst_id, value * e.weight, "swap", e.id, e.confidence)
+        )
         _add(out.synthetic_by_company, e.dst_id, value * e.weight)
     rest = value * (ONE - covered)
     reason = (
@@ -226,7 +262,7 @@ def _add_fund(
         if rest >= 0
         else "the filing's weights add to more than 100% of net assets (leverage or negative cash)"
     )
-    out.not_looked_through.append(NotLookedThrough(name, rest, reason))
+    out.not_looked_through.append(NotLookedThrough(name, rest, reason, fund_id, label))
 
     # Country comes from the filing's own per-line country, so it needs no name matching.
     lines = conn.execute(

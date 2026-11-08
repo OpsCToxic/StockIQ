@@ -17,6 +17,7 @@ from stockiq.connectors.sec_tickers.models import SecCompany, SecFund, SecRecord
 from stockiq.core.config import Settings
 
 ALIAS_SOURCE = "sec_company_tickers"
+UNKNOWN_START = datetime(1970, 1, 1, tzinfo=UTC)
 KIND_COMPANY = "sec_tickers_exchange"
 KIND_FUND = "sec_tickers_mf"
 
@@ -163,11 +164,24 @@ class SecTickersConnector(BaseConnector[SecRecord]):
             ),
             {"at": at, "src": ALIAS_SOURCE, "kind": kind},
         )
+        # The very first seed of this kind has no history to go on: its aliases start "unknown"
+        # (epoch), not on the day we happened to fetch. Later seeds record real changes.
+        first_seed = (
+            conn.execute(
+                text(
+                    "SELECT 1 FROM entity_alias a JOIN entity e ON e.id = a.entity_id "
+                    "WHERE a.source = :src AND a.kind = 'ticker' AND e.type = :kind LIMIT 1"
+                ),
+                {"src": ALIAS_SOURCE, "kind": kind},
+            ).first()
+            is None
+        )
+        valid_from = UNKNOWN_START if first_seed else at
         conn.execute(
             text(
                 f"""
                 INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at)
-                SELECT e.id, p.ticker, 'ticker', :src, :at, :at
+                SELECT e.id, p.ticker, 'ticker', :src, :vf, :at
                 FROM seed_pair p JOIN entity e ON {match} AND e.type = :kind
                 WHERE NOT EXISTS (
                     SELECT 1 FROM entity_alias a
@@ -175,5 +189,5 @@ class SecTickersConnector(BaseConnector[SecRecord]):
                       AND a.kind = 'ticker' AND a.valid_to IS NULL)
                 """  # noqa: S608 - interpolates a constant, no user input
             ),
-            {"src": ALIAS_SOURCE, "at": at, "kind": kind},
+            {"src": ALIAS_SOURCE, "at": at, "kind": kind, "vf": valid_from},
         )

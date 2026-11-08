@@ -2,6 +2,9 @@
 
 With no tickers it covers every fund you currently hold. Tickers are mapped to SEC series ids
 through the entity master (run `sec_tickers` first).
+
+`python -m stockiq.connectors.nport reparse` re-processes every stored filing from raw storage,
+without fetching. Use it after the resolver or its aliases change (raw-first, invariant 4).
 """
 
 import asyncio
@@ -57,5 +60,40 @@ async def main(tickers: list[str]) -> None:
     print(f"series {series}: fetched {result.fetched} payloads, {result.records} reports")
 
 
+def reparse() -> None:
+    """Re-run parse and upsert over every stored N-PORT filing, from raw storage."""
+    from stockiq.connectors.base import RawPayload, StoredPayload
+    from stockiq.connectors.nport.connector import KIND_FILING, parse_report
+
+    store = S3RawStore(get_settings())
+    connector = NportConnector(None, [])
+    with get_engine().begin() as conn:
+        docs = conn.execute(
+            text(
+                "SELECT id, source_id, raw_uri, hash, url, published_at, ingested_at "
+                "FROM document WHERE source = 'nport' AND kind = :k ORDER BY published_at"
+            ),
+            {"k": KIND_FILING},
+        ).all()
+        for d in docs:
+            body = store.get(d.raw_uri)
+            raw = RawPayload(
+                d.source_id,
+                "xml",
+                body,
+                d.ingested_at,
+                url=d.url,
+                published_at=d.published_at,
+                kind=KIND_FILING,
+            )
+            stored = StoredPayload(raw, d.raw_uri, d.hash, d.id)
+            connector.upsert(conn, stored, [parse_report(body, d.source_id, d.published_at)])
+            print(f"reparsed {d.source_id}")
+    print(f"{len(docs)} filings re-processed from raw storage")
+
+
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1:]))
+    if sys.argv[1:] == ["reparse"]:
+        reparse()
+    else:
+        asyncio.run(main(sys.argv[1:]))

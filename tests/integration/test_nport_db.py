@@ -138,7 +138,7 @@ def test_a_curated_identifier_is_exact_but_a_learned_one_keeps_name_confidence(
         )
     ).one()
     assert (row.match_method, row.match_confidence) == (
-        "learned_name_identifier",
+        "identifier:cusip:learned",
         Decimal("0.95"),
     )
     # Promote it by hand to a curated identifier: now it is exact.
@@ -150,7 +150,7 @@ def test_a_curated_identifier_is_exact_but_a_learned_one_keeps_name_confidence(
             "WHERE name = 'Apple Inc' AND known_at = '2026-12-29'"
         )
     ).one()
-    assert (row.match_method, row.match_confidence) == ("identifier", Decimal("1.0"))
+    assert (row.match_method, row.match_confidence) == ("identifier:cusip", Decimal("1.0"))
 
 
 def test_name_match_teaches_the_cusip_so_next_time_it_is_exact(conn: Connection) -> None:
@@ -175,7 +175,7 @@ def test_name_match_teaches_the_cusip_so_next_time_it_is_exact(conn: Connection)
         .scalars()
         .all()
     )
-    assert methods == ["learned_name_identifier"]  # matched by the learned CUSIP, still 0.95
+    assert methods == ["identifier:cusip:learned"]  # matched by the learned CUSIP, still 0.95
 
 
 def test_reload_is_idempotent(conn: Connection) -> None:
@@ -292,3 +292,17 @@ def test_reparse_after_an_alias_fix_moves_the_edge_instead_of_doubling_it(
     assert apple_edges <= 1
     total = _one(conn, "SELECT coalesce(sum(weight), 0) FROM edge")
     assert total < 1.5  # one report's weights, not two stacked
+
+
+def test_unmatched_equity_lines_are_queued_for_review_even_without_candidates(
+    conn: Connection,
+) -> None:
+    _seed(conn)  # Apple, Alphabet, Microsoft, NVIDIA exist; the other six equity lines do not
+    _load(conn)
+    queued = conn.execute(
+        text("SELECT count(*) FROM review_queue WHERE source = 'nport' AND status = 'pending'")
+    ).scalar_one()
+    unresolved_equity = conn.execute(
+        text("SELECT count(*) FROM fund_holding WHERE asset_cat = 'EC' AND constituent_id IS NULL")
+    ).scalar_one()
+    assert queued == unresolved_equity and queued > 0
