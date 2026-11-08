@@ -82,6 +82,9 @@ make gate PHASE=N  # run the phase gate checks listed in docs/roadmap.md
 ## How to work here
 - Find the current phase in `docs/roadmap.md` before starting. Stay inside it; note anything
   out-of-phase in the roadmap's parking lot rather than building it.
+- When a roadmap item is completed and verified (migration applied, lint and tests green, or
+  Cameron confirmed it), tick its box in `docs/roadmap.md` in the same change. Use `[~]` for partly
+  done items and note what is still open. Leave it unticked if verification failed or was skipped.
 - Schema changes go through an Alembic migration; never edit tables by hand or edit a committed migration.
 - Never edit `.env`, `secrets/`, or anything under `data/raw/` (raw payloads are immutable).
 - Significant design choices (provider picks, schema shape, graduating to Kafka) get an

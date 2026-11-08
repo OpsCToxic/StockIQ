@@ -44,10 +44,22 @@ not adopted. Tiingo remains the fallback if Massive's terms or limits change.
 - Store **unadjusted** prices plus corporate actions (splits, dividends) and compute adjusted
   series ourselves. Massive adjusts to the date you fetch, which would break point-in-time
   queries (invariant 2). Request `adjusted=false` and fetch splits and dividends separately.
-- Dividends and total return: confirm whether the free plan serves dividends. If not, total
-  return is price-only until a dividend source is added.
-- Confirm the free plan's license permits personal use before relying on it. Read Massive's terms
-  when creating the account. Do not show or share the data with others.
+- Dividends and total return: Cameron confirmed on 2026-11-07 that the free plan includes
+  dividends, so total return does not need a separate dividend source. Verify against the
+  endpoint when the connector is built.
+- License (read 2026-11-07, Individuals Terms and Market Data Terms, both updated 2026-11-03): the
+  Individuals Terms cover free and paid individual plans for "your own personal, non-commercial,
+  and non-business purposes", and the Market Data Terms allow storing the data and using it for
+  "your own research, analysis and investment activities". A self-hosted Postgres of daily prices
+  for personal analytics fits. Limits to respect:
+  - Never share or display the raw prices to anyone else (no hosted dashboard, export or API for others).
+  - Never use the prices to train, fine-tune or distill an ML model.
+  - No business or commercial use, and no index or benchmark built from the data.
+  - On downgrade or cancellation, delete stored data within 30 days (backups within 90). Derived
+    results that contain no raw Information may be kept.
+  - Not verified: Nasdaq-listed data falls under the UTP subscriber agreement (summary only), the
+    Businesses Terms were only partly read, and the pricing page was not checked. Terms can change.
+    Not legal advice.
 - Event studies with fewer than 8 past occurrences are already greyed out (invariant 5). With
   2 years of history, only quarterly events (earnings) reach n of about 8; rarer events will show
   as greyed out until the history is longer.

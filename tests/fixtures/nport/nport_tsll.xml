@@ -1,0 +1,677 @@
+<?xml version="1.0" encoding="UTF-8"?><edgarSubmission xmlns="http://www.sec.gov/edgar/nport" xmlns:com="http://www.sec.gov/edgar/common" xmlns:ncom="http://www.sec.gov/edgar/nportcommon" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <headerData>
+    <submissionType>NPORT-P</submissionType>
+    <isConfidential>false</isConfidential>
+    <filerInfo>
+
+      <filer>
+        <issuerCredentials>
+          <cik>0001424958</cik>
+          <ccc>XXXXXXXX</ccc>
+        </issuerCredentials>
+      </filer>
+
+
+      <seriesClassInfo>
+        <seriesId>S000072483</seriesId>
+        <classId>C000228774</classId>
+      </seriesClassInfo>
+
+
+    </filerInfo>
+  </headerData>
+  <formData>
+    <genInfo>
+      <regName>Direxion Shares ETF Trust</regName>
+      <regFileNumber>811-22201</regFileNumber>
+      <regCik>0001424958</regCik>
+      <regLei>549300M501IVJM50FG12</regLei>
+      <regStreet1>1301 Avenue of the Americas (6th Avenue)</regStreet1>
+      <regStreet2>28th Floor</regStreet2>
+      <regCity>New York</regCity>
+      <regStateConditional regCountry="US" regState="US-NY"/>
+      <regZipOrPostalCode>10019</regZipOrPostalCode>
+      <regPhone>646-572-3390</regPhone>
+      <seriesName>Direxion Daily TSLA Bull 2X Shares</seriesName>
+      <seriesId>S000072483</seriesId>
+      <seriesLei>549300ICR6HAVCT16R84</seriesLei>
+      <repPdEnd>2026-10-31</repPdEnd>
+      <repPdDate>2026-07-31</repPdDate>
+      <isFinalFiling>N</isFinalFiling>
+    </genInfo>
+    <fundInfo>
+      <totAssets>3116429076.350000000000</totAssets>
+      <totLiabs>81612385.510000000000</totLiabs>
+      <netAssets>3034816690.840000000000</netAssets>
+      <assetsAttrMiscSec>0.000000000000</assetsAttrMiscSec>
+      <assetsInvested>0.000000000000</assetsInvested>
+      <amtPayOneYrBanksBorr>0.000000000000</amtPayOneYrBanksBorr>
+      <amtPayOneYrCtrldComp>0.000000000000</amtPayOneYrCtrldComp>
+      <amtPayOneYrOthAffil>0.000000000000</amtPayOneYrOthAffil>
+      <amtPayOneYrOther>0.000000000000</amtPayOneYrOther>
+      <amtPayAftOneYrBanksBorr>0.000000000000</amtPayAftOneYrBanksBorr>
+      <amtPayAftOneYrCtrldComp>0.000000000000</amtPayAftOneYrCtrldComp>
+      <amtPayAftOneYrOthAffil>0.000000000000</amtPayAftOneYrOthAffil>
+      <amtPayAftOneYrOther>0.000000000000</amtPayAftOneYrOther>
+      <delayDeliv>0.000000000000</delayDeliv>
+      <standByCommit>0.000000000000</standByCommit>
+      <liquidPref>0.000000000000</liquidPref>
+      <cshNotRptdInCorD>0.000000000000</cshNotRptdInCorD>
+      <isNonCashCollateral>N</isNonCashCollateral>
+      <returnInfo>
+        <monthlyTotReturns>
+          <monthlyTotReturn classId="C000228774" rtn1="27.61415041" rtn2="-10.15628048" rtn3="-48.45315468"/>
+        </monthlyTotReturns>
+        <monthlyReturnCats>
+          <equityContracts>
+            <mon1 netRealizedGain="-103730205.76" netUnrealizedAppr="1414211275.23"/>
+            <mon2 netRealizedGain="-179362411.92" netUnrealizedAppr="-283780380.46"/>
+            <mon3 netRealizedGain="-363987191.9" netUnrealizedAppr="-1767853210.57"/>
+            <swapCategory>
+              <instrMon1 netRealizedGain="-103730205.76" netUnrealizedAppr="1414211275.23"/>
+              <instrMon2 netRealizedGain="-179362411.92" netUnrealizedAppr="-283780380.46"/>
+              <instrMon3 netRealizedGain="-363987191.9" netUnrealizedAppr="-1767853210.57"/>
+            </swapCategory>
+          </equityContracts>
+        </monthlyReturnCats>
+        <othMon1 netRealizedGain="20291672.36" netUnrealizedAppr="69031103.7"/>
+        <othMon2 netRealizedGain="-502877.44" netUnrealizedAppr="-22635104.45"/>
+        <othMon3 netRealizedGain="6071648.3" netUnrealizedAppr="-146943862.83"/>
+      </returnInfo>
+      <mon1Flow redemption="1415461350.95" reinvestment="0" sales="470862150.87"/>
+      <mon2Flow redemption="268580723.29" reinvestment="0" sales="331381691.03"/>
+      <mon3Flow redemption="472112946.68" reinvestment="0" sales="888477816.91"/>
+
+
+      <varInfo>
+
+        <fundsDesignatedInfo>
+          <nameDesignatedIndex>Tesla Inc.</nameDesignatedIndex>
+          <indexIdentifier>TESLA_INC</indexIdentifier>
+
+        </fundsDesignatedInfo>
+
+      </varInfo>
+    </fundInfo>
+    <invstOrSecs>
+      <invstOrSec>
+        <name>TESLA INC</name>
+        <lei>54930043XZGB27CTOV49</lei>
+        <title>Tesla Inc COM USD0.001</title>
+        <cusip>88160R101</cusip>
+        <identifiers>
+          <isin value="US88160R1014"/>
+          <ticker value="TSLA"/>
+        </identifiers>
+        <balance>1534733.00</balance>
+        <units>NS</units>
+        <curCd>USD</curCd>
+        <valUSD>477624256.93</valUSD>
+        <pctVal>15.7381583663</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>EC</assetCat>
+        <issuerCat>CORP</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>DREYFUS</name>
+        <lei>N/A</lei>
+        <title>DREYFUS GOV'T CASH MGMT -INSTITUTIONAL CUSIP 262006208 DGCXX (#289)</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="996086609"/>
+        </identifiers>
+        <balance>1092525121.90</balance>
+        <units>PA</units>
+        <curCd>USD</curCd>
+        <valUSD>1092525121.90</valUSD>
+        <pctVal>35.9997071717</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>STIV</assetCat>
+        <issuerCat>RF</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>GOLDMAN FINANCIAL</name>
+        <lei>549300DAH6N80PM31E83</lei>
+        <title>GOLDMAN FINL SQ TRSRY INST 506</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="S9999349"/>
+        </identifiers>
+        <balance>1228873727.76</balance>
+        <units>PA</units>
+        <curCd>USD</curCd>
+        <valUSD>1228873727.76</valUSD>
+        <pctVal>40.4925190859</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>STIV</assetCat>
+        <issuerCat>RF</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>DREYFUS</name>
+        <lei>N/A</lei>
+        <title>DREYFUS TRSRY SECURITIES CASH MGMT</title>
+        <cusip>S99991620</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="X9USDDTP3"/>
+        </identifiers>
+        <balance>1101895061.79</balance>
+        <units>PA</units>
+        <curCd>USD</curCd>
+        <valUSD>1101895061.79</valUSD>
+        <pctVal>36.3084553053</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>STIV</assetCat>
+        <issuerCat>RF</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>GOLDMAN SACHS LIQ ES FD A</name>
+        <lei>N/A</lei>
+        <title>GOLDMAN SACHS FIN GOV 465 INSTITUT</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="X9USDGLDS"/>
+        </identifiers>
+        <balance>254870000.00</balance>
+        <units>PA</units>
+        <curCd>USD</curCd>
+        <valUSD>254870000.00</valUSD>
+        <pctVal>8.3982008129</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>STIV</assetCat>
+        <issuerCat>RF</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>JP MORGAN 100 US TRSY CAPITAL 3163</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="X9USDJPMN"/>
+        </identifiers>
+        <balance>630000000.00</balance>
+        <units>PA</units>
+        <curCd>USD</curCd>
+        <valUSD>630000000.00</valUSD>
+        <pctVal>20.7590791860</pctVal>
+        <payoffProfile>Long</payoffProfile>
+        <assetCat>STIV</assetCat>
+        <issuerCat>RF</issuerCat>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>1</fairValLevel>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC Swap</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLABC"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-246894572.44</valUSD>
+        <pctVal>-8.1354031426</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>Barclays Bank PLC</counterpartyName>
+              <counterpartyLei>G5GSEF7VJP5I7OUK5573</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.150000000000" pmntAmt="7.150000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>1084990406.81</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-246894572.44</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC SWAP</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLABP"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-230388704.47</valUSD>
+        <pctVal>-7.5915196185</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>BNP Paribas</counterpartyName>
+              <counterpartyLei>R0MUWSFPU8MPRO8K5P83</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.150000000000" pmntAmt="7.150000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>806447186.88</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-230388704.47</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC SWAP</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLACT"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-169949432.49</valUSD>
+        <pctVal>-5.5999900423</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>Citibank National Association</counterpartyName>
+              <counterpartyLei>E57ODZWZ7FF32TWEFA76</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.400000000000" pmntAmt="7.400000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>723747797.53</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-169949432.49</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC SWAP</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLAGS"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-176774447.28</valUSD>
+        <pctVal>-5.8248805542</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>Goldman Sachs &amp; Co. LLC</counterpartyName>
+              <counterpartyLei>FOR8UP27PHTHYVLBNG30</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.150000000000" pmntAmt="7.150000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>1005017217.06</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-176774447.28</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC Swap</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLAJP"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-521101111.69</valUSD>
+        <pctVal>-17.1707607007</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>J.P. MORGAN SECURITIES LLC.</counterpartyName>
+              <counterpartyLei>ZBUT11V806EZRVTWT807</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.350000000000" pmntAmt="7.350000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>870968488.92</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-521101111.69</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC Swap</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLAML"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-61781780.74</valUSD>
+        <pctVal>-2.0357664740</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>Bank of America N.A. (formerly Merrill Lynch)</counterpartyName>
+              <counterpartyLei>B4TYDEB6GKMZO031MB27</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.600000000000" pmntAmt="7.600000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>379055647.26</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-61781780.74</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+      <invstOrSec>
+        <name>N/A</name>
+        <lei>N/A</lei>
+        <title>TESLA INC SWAP</title>
+        <cusip>N/A</cusip>
+        <identifiers>
+          <other otherDesc="Internal ID" value="TSLANM"/>
+        </identifiers>
+        <balance>1</balance>
+        <units>NC</units>
+        <curCd>USD</curCd>
+        <valUSD>-288058575.56</valUSD>
+        <pctVal>-9.4917948893</pctVal>
+        <payoffProfile>N/A</payoffProfile>
+        <assetCat>DO</assetCat>
+        <issuerConditional desc="Other - Swap" issuerCat="OTHER"/>
+        <invCountry>US</invCountry>
+        <isRestrictedSec>N</isRestrictedSec>
+
+        <fairValLevel>2</fairValLevel>
+        <derivativeInfo>
+          <swapDeriv derivCat="SWP">
+            <counterparties>
+              <counterpartyName>Nomura Global Financial Products Inc.</counterpartyName>
+              <counterpartyLei>0Z3VO5H2G7GRS05BHJ91</counterpartyLei>
+            </counterparties>
+            <descRefInstrmnt>
+              <indexBasketInfo>
+                <indexName>N/A</indexName>
+                <indexIdentifier>TSLA</indexIdentifier>
+              </indexBasketInfo>
+            </descRefInstrmnt>
+            <swapFlag>Y</swapFlag>
+            <floatingRecDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="Total Return Swap Contract of Common Shares of Tesla, Inc." floatingRtSpread="0.000000000000" pmntAmt="0.000000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingRecDesc>
+            <floatingPmntDesc curCd="USD" fixedOrFloating="Floating" floatingRtIndex="1 month Sofr + spread" floatingRtSpread="7.400000000000" pmntAmt="7.400000000000">
+              <rtResetTenors>
+                <rtResetTenor rateTenor="Day" rateTenorUnit="1" resetDt="Day" resetDtUnit="1"/>
+              </rtResetTenors>
+            </floatingPmntDesc>
+            <terminationDt>2049-12-31</terminationDt>
+            <upfrontPmnt>0.000000000000</upfrontPmnt>
+            <pmntCurCd>USD</pmntCurCd>
+            <upfrontRcpt>0.000000000000</upfrontRcpt>
+            <rcptCurCd>USD</rcptCurCd>
+            <notionalAmt>721754808.69</notionalAmt>
+            <curCd>USD</curCd>
+            <unrealizedAppr>-288058575.56</unrealizedAppr>
+          </swapDeriv>
+        </derivativeInfo>
+        <securityLending>
+          <isCashCollateral>N</isCashCollateral>
+          <isNonCashCollateral>N</isNonCashCollateral>
+          <isLoanByFund>N</isLoanByFund>
+        </securityLending>
+      </invstOrSec>
+    </invstOrSecs>
+    <signature>
+      <ncom:dateSigned>2026-09-28</ncom:dateSigned>
+      <ncom:nameOfApplicant>Direxion Shares ETF Trust</ncom:nameOfApplicant>
+      <ncom:signature>Patrick Rudnick</ncom:signature>
+      <ncom:signerName>Patrick Rudnick</ncom:signerName>
+      <ncom:title>Principal Executive Officer</ncom:title>
+    </signature>
+  </formData>
+  <documents>XXXX</documents>
+</edgarSubmission>

@@ -51,7 +51,7 @@ emits a normalized event. Raw-first means history can be re-parsed when a parser
 | Source | Feeds | Cadence | Cost / limits | Notes |
 |---|---|---|---|---|
 | Brokerage aggregator (SnapTrade or Plaid Investments) | Holdings, lots, transactions | Daily + on demand | Paid per connection | CSV import as fallback |
-| E*TRADE API (direct sign-on) | Holdings, lots | Daily, after sign-on | Cost unconfirmed; token expires midnight ET, so login is daily | Read endpoints only; see ADR 0002 |
+| E*TRADE positions CSV export | Holdings, cash | On demand (you download and import) | Free | No API connector: dropped 2026-11-08, ADR 0002 superseded. No lots in the export |
 | SEC EDGAR N-PORT | ETF / fund holdings for look-through | Quarterly, ~60-day lag | Free; descriptive User-Agent, ~10 req/s | Issuer daily files fresher where available |
 | SEC EDGAR 10-K / 10-Q / 8-K | Filing text attached to attribution explanations | On filing | Free | Stored as documents; no relationships extracted |
 | SEC EDGAR Form 4 | Insider trades | ~2 business days after trade | Free | Use daily index files, not crawling |
@@ -243,6 +243,6 @@ AND/OR, Cooldown), Sinks (Alert, Digest, Webhook). Nodes call the same API.
 ## Open questions (Cameron decides)
 - ~~Market-data provider~~ Decided: Massive free for the PoC (ADR 0005).
 - Brokerage aggregator, and broker support.
-- E*TRADE read-only access: if no read-only key exists, whether to approve an exception (ADR 0002).
+- ~~E*TRADE read-only access~~ Moot: the E*TRADE API connector was dropped (ADR 0002 superseded).
 - Dashboard as a separate app or pages inside the trading platform.
 - 13F manager watchlist.

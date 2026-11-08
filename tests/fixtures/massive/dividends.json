@@ -1,0 +1,27 @@
+{
+ "status": "OK",
+ "request_id": "synthetic",
+ "next_url": null,
+ "results": [
+  {
+   "id": "Esynthetic-div-1",
+   "ticker": "AAPL",
+   "ex_dividend_date": "2026-11-03",
+   "declaration_date": "2026-10-28",
+   "pay_date": "2026-11-10",
+   "record_date": "2026-11-03",
+   "cash_amount": 0.27,
+   "currency": "USD",
+   "frequency": 4,
+   "distribution_type": "recurring",
+   "historical_adjustment_factor": 0.9987,
+   "split_adjusted_cash_amount": 0.27
+  },
+  {
+   "id": "Esynthetic-div-2",
+   "ticker": "NOENTITY",
+   "ex_dividend_date": "2026-11-03",
+   "cash_amount": 0.1
+  }
+ ]
+}

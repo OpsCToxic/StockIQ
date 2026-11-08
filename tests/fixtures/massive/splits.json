@@ -1,0 +1,15 @@
+{
+ "status": "OK",
+ "request_id": "synthetic",
+ "results": [
+  {
+   "id": "Esynthetic-split-1",
+   "ticker": "AAPL",
+   "execution_date": "2026-10-20",
+   "split_from": 1,
+   "split_to": 4,
+   "adjustment_type": "forward_split",
+   "historical_adjustment_factor": 0.25
+  }
+ ]
+}

@@ -21,6 +21,7 @@ dependencies = [
   "statsmodels>=0.14",
   "anthropic>=0.40",
   "structlog>=24.1",
+  "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]
@@ -54,10 +55,14 @@ ignore = ["S101"]
 testpaths = ["tests"]
 pythonpath = ["src", "."]
 markers = ["integration: needs docker compose services", "pit: point-in-time correctness"]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration or pit'"
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
 packages = ["stockiq"]
+
+[[tool.mypy.overrides]]
+module = ["boto3", "botocore.*", "defusedxml", "defusedxml.*"]
+ignore_missing_imports = true
