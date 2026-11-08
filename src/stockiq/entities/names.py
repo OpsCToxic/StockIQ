@@ -55,7 +55,8 @@ def distinctive_tokens(normalized: str) -> set[str]:
 
 
 def ensure_name_aliases(conn: Connection) -> int:
-    """Add a normalised `name` alias for every entity that lacks one. Returns rows added.
+    """Keep exactly one open normalised `name` alias per company, equal to its current name.
+    Returns the number of aliases opened.
 
     Aliases from an older normalisation version are closed; where the new rule yields the same
     string the old row is reopened under the new version, so no entity is left without one.
@@ -73,29 +74,53 @@ def ensure_name_aliases(conn: Connection) -> int:
     rows = conn.execute(
         text(
             """
-            SELECT e.id, e.name, e.known_at FROM entity e
-            WHERE e.type = 'company' AND NOT EXISTS (
-                SELECT 1 FROM entity_alias a
-                WHERE a.entity_id = e.id AND a.kind = 'name' AND a.source = :src)
+            SELECT e.id, e.name, e.known_at,
+                   coalesce(array_agg(a.alias) FILTER (WHERE a.alias IS NOT NULL), '{}') AS open
+            FROM entity e
+            LEFT JOIN entity_alias a ON a.entity_id = e.id AND a.kind = 'name'
+                 AND a.source = :src AND a.valid_to IS NULL
+            WHERE e.type = 'company'
+            GROUP BY e.id, e.name, e.known_at
             """
         ),
         {"src": NAME_ALIAS_SOURCE},
     ).all()
-    params = [
-        {"e": r.id, "a": normalize_name(r.name), "at": r.known_at, "src": NAME_ALIAS_SOURCE}
-        for r in rows
-        if normalize_name(r.name)
-    ]
-    if params:
-        conn.execute(
-            text(
-                """
-                INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at)
-                VALUES (:e, :a, 'name', :src, :at, :at)
-                ON CONFLICT (entity_id, alias, kind, valid_from)
-                DO UPDATE SET valid_to = NULL, source = EXCLUDED.source
-                """
-            ),
-            params,
-        )
-    return len(params)
+    added = 0
+    for r in rows:
+        wanted = normalize_name(r.name)
+        if not wanted or list(r.open) == [wanted]:
+            continue
+        stale = [a for a in r.open if a != wanted]
+        if stale:
+            # The entity was renamed (the SEC seed overwrites `entity.name`): the old name stops
+            # matching as of now, and the new one starts now. Fund lines naming the new company
+            # then match exactly instead of falling through to fuzzy matching.
+            conn.execute(
+                text(
+                    "UPDATE entity_alias SET valid_to = clock_timestamp() WHERE entity_id = :e "
+                    "AND kind = 'name' AND source = :src AND valid_to IS NULL AND alias = ANY(:a)"
+                ),
+                {"e": r.id, "src": NAME_ALIAS_SOURCE, "a": stale},
+            )
+        if wanted not in r.open:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at)
+                    VALUES (:e, :a, 'name', :src, CASE WHEN :renamed THEN clock_timestamp()
+                                                       ELSE :at END,
+                            CASE WHEN :renamed THEN clock_timestamp() ELSE :at END)
+                    ON CONFLICT (entity_id, alias, kind, valid_from)
+                    DO UPDATE SET valid_to = NULL, source = EXCLUDED.source
+                    """
+                ),
+                {
+                    "e": r.id,
+                    "a": wanted,
+                    "src": NAME_ALIAS_SOURCE,
+                    "at": r.known_at,
+                    "renamed": bool(stale),
+                },
+            )
+            added += 1
+    return added

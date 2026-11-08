@@ -44,6 +44,24 @@ def _dec(el: Element | None, tag: str) -> Decimal | None:
     return Decimal(value) if value not in (None, "") else None
 
 
+def _leg_kind(swap: Element, side: str) -> str | None:
+    """ "rate" or "reference" for one leg of a swap ("Rec" received, "Pmnt" paid), else None."""
+    if swap.find(f"{NS}fixed{side}Desc") is not None:
+        return "rate"  # a fixed leg is an interest-rate leg
+    leg = swap.find(f"{NS}floating{side}Desc")
+    if leg is None:
+        return None
+    text_ = leg.get("floatingRtIndex") or ""
+    if RATE_WORDS.search(text_):
+        return "rate"
+    return "reference" if text_.strip() else None
+
+
+def _counterparty(el: Element) -> str | None:
+    name = el.findtext(f"{NS}derivativeInfo/{NS}swapDeriv/{NS}counterparties/{NS}counterpartyName")
+    return name.strip() if name and name.strip() else None
+
+
 def _parse_swap(el: Element) -> tuple[str | None, Decimal | None, str | None]:
     """Reference identifier, notional and direction of a swap line, else all None."""
     swap = el.find(f"{NS}derivativeInfo/{NS}swapDeriv")
@@ -51,15 +69,21 @@ def _parse_swap(el: Element) -> tuple[str | None, Decimal | None, str | None]:
         return None, None, None
     ref = swap.findtext(f"{NS}descRefInstrmnt/{NS}indexBasketInfo/{NS}indexIdentifier")
     notional = _dec(swap, "notionalAmt")
-    recv = swap.find(f"{NS}floatingRecDesc")
-    pay = swap.find(f"{NS}floatingPmntDesc")
-    recv_text = (recv.get("floatingRtIndex") or "") if recv is not None else ""
-    pay_text = (pay.get("floatingRtIndex") or "") if pay is not None else ""
-    if not ref or ref.upper() == "N/A" or notional is None or not (recv_text or pay_text):
+    if not ref or ref.upper() == "N/A" or notional is None:
         return None, None, None
-    # The fund receives the reference's return unless the receive leg is the rate leg.
-    short = bool(RATE_WORDS.search(recv_text)) and not RATE_WORDS.search(pay_text)
-    return ref.strip().upper(), notional, "short" if short else "long"
+    received = _leg_kind(swap, "Rec")
+    paid = _leg_kind(swap, "Pmnt")
+    # One leg is the interest rate and the other follows the reference. If that is not clear
+    # (both rate, both reference, or a leg missing) the direction is unknown, so the swap is left
+    # out of exposure rather than guessed: a wrong sign would flip the economics.
+    if received == "reference" and paid == "rate":
+        direction = "long"
+    elif received == "rate" and paid == "reference":
+        direction = "short"
+    else:
+        return None, None, None
+    # Some filers might report a short notional as negative; the direction comes from the legs.
+    return ref.strip().upper(), abs(notional), direction
 
 
 def parse_report(body: bytes, accession: str, known_at: datetime) -> NportReport:
@@ -90,6 +114,7 @@ def parse_report(body: bytes, accession: str, known_at: datetime) -> NportReport
                 swap_ref=swap_ref,
                 notional=notional,
                 swap_direction=direction,
+                counterparty=_counterparty(el),
                 span_text=spans[seq],
             )
         )
@@ -263,13 +288,20 @@ class NportConnector(BaseConnector[NportReport]):
                 INSERT INTO fund_holding
                     (fund_id, as_of, known_at, doc_id, seq, name, title, cusip, isin, lei,
                      asset_cat, payoff_profile, country, balance, val_usd, pct_val,
-                     swap_ref, notional, swap_direction,
+                     swap_ref, notional, swap_direction, counterparty,
                      constituent_id, match_method, match_confidence)
                 VALUES
                     (:fund, :as_of, :known, :doc, :seq, :name, :title, :cusip, :isin, :lei,
                      :cat, :payoff, :country, :bal, :val, :pct, :sref, :notl, :sdir,
-                     :cid, :method, :conf)
+                     :cpty, :cid, :method, :conf)
                 ON CONFLICT (doc_id, seq) DO UPDATE SET
+                    name = EXCLUDED.name, title = EXCLUDED.title, cusip = EXCLUDED.cusip,
+                    isin = EXCLUDED.isin, lei = EXCLUDED.lei, asset_cat = EXCLUDED.asset_cat,
+                    payoff_profile = EXCLUDED.payoff_profile, country = EXCLUDED.country,
+                    balance = EXCLUDED.balance, val_usd = EXCLUDED.val_usd,
+                    pct_val = EXCLUDED.pct_val, swap_ref = EXCLUDED.swap_ref,
+                    notional = EXCLUDED.notional, swap_direction = EXCLUDED.swap_direction,
+                    counterparty = EXCLUDED.counterparty,
                     constituent_id = EXCLUDED.constituent_id,
                     match_method = EXCLUDED.match_method,
                     match_confidence = EXCLUDED.match_confidence
@@ -296,6 +328,7 @@ class NportConnector(BaseConnector[NportReport]):
                     "sref": h.swap_ref,
                     "notl": h.notional,
                     "sdir": h.swap_direction,
+                    "cpty": h.counterparty,
                     "cid": cid,
                     "method": method,
                     "conf": conf,

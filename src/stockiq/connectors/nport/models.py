@@ -19,6 +19,7 @@ class NportHolding(BaseModel):
     pct_val: Decimal | None = None  # percent of net assets (0.0684 means 0.0684%)
     swap_ref: str | None = None  # reference instrument of a swap (usually a ticker)
     notional: Decimal | None = None
+    counterparty: str | None = None  # the other side of a swap
     swap_direction: str | None = None  # "long" if the fund receives the return
     span_text: str  # the holding's XML exactly as filed, kept as edge evidence
 

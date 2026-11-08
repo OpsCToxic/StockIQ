@@ -81,19 +81,21 @@ The graph is the core asset; entity resolution is its hardest part.
 ### Entity resolution
 - **Canonical ID:** one `entity_id` per company, mapped to CIK, CUSIP, FIGI, LEI, current and historical tickers, name variants.
 - **Seed:** SEC company tickers file + OpenFIGI. Private companies get entities too (`public = false`).
-- **Resolver:** exact identifier match → alias table → trigram fuzzy match → LLM disambiguation with context. Output carries a confidence score.
+- **Resolver:** exact identifier match (1.0; 0.95 if the identifier was learned from a name match) → ticker alias valid at the document's date (0.95) → unique exact normalised name (0.95) → trigram fuzzy match (needs a distinctive word in common and a margin over the runner-up; capped at 0.89) → LLM disambiguation with context (**not built yet**; it must run only on pre-filtered items and be cached). Output carries a confidence score. At 0.9 or above a match is accepted; 0.6 to 0.9 is linked provisionally and queued (ADR 0007); below 0.6 nothing is linked and it is queued.
 - **Social text:** cashtags first; bare-word tickers (AI, ALL, NOW, IT) only with a cashtag, company name, or finance context nearby. Keep a stop-list.
-- **Review queue:** low-confidence matches go to a review UI; decisions become aliases.
+- **Review queue:** low-confidence matches (and unmatched equity lines) go to `review_queue`; today a CLI (`python -m stockiq.entities.review`), a UI page later. A decision becomes `entity_alias` rows with `source = 'review'`, which the resolver treats as curated.
+- **Ticker history:** SEC's files carry none. Aliases from the first seed start at "unknown" (epoch); later seeds record real changes. A ticker that changed hands before the first seed can attach the wrong company's older prices (ADR 0006).
 
 ### Graph schema
 Nodes: Company, Fund, Portfolio, Account, Sector, Country/Region, Person, Institution.
-Edges are time-stamped (`valid_from` / `valid_to`):
+Edges are time-stamped (`valid_from` / `valid_to`) and versioned by `known_at`, so an amended filing is a new version, not an overwrite. `valid_to` is set when a later report begins and embeds future knowledge; point-in-time reads use `valid_from` and `known_at`, never `valid_to`:
 
 | Edge | Example | Weight | Source |
 |---|---|---|---|
 | HOLDS (portfolio → security) | You → VOO | Market value | Brokerage |
-| CONTAINS (fund → company) | VOO → AAPL | Fund weight % | N-PORT / issuer file |
-| IN_SECTOR | AAPL → Tech hardware | 1 | GICS-like mapping |
+| CONTAINS (fund → company) | VOO → AAPL | Fund weight (fraction of net assets) | N-PORT / issuer file |
+| SYNTHETIC (fund → company) | TSLL → TSLA | Signed swap notional / net assets; not funded value | N-PORT swap lines (ADR 0007) |
+| IN_SECTOR | AAPL → SIC 3571 Electronic Computers | 1 | SEC submissions (SIC); `valid_from` equals `known_at`, the fetch time, because SEC serves only the current code |
 | INSIDER_OF / TRADED | Exec → company | Trade size | Form 4 |
 | POSITION_IN (institution → company) | Manager → MSFT | Shares, value | 13F |
 
@@ -120,13 +122,16 @@ Graduation path: Kafka/Redpanda if event volume outgrows Redis Streams. Event sc
 
 ### Core tables
 - `entity(id, name, type, cik, figi, lei, public, sector_id, country)`
-- `entity_alias(entity_id, alias, kind, source, valid_from, valid_to)`
-- `account(id, broker, name)` · `holding(account_id, security_id, qty, cost_basis, as_of)` · `lot(...)`
-- `edge(id, src_id, dst_id, type, weight, valid_from, valid_to, confidence)`
+- `entity_alias(entity_id, alias, kind, source, valid_from, valid_to, known_at)` (kinds: ticker, name, cusip, isin, figi, review)
+- `account(id, broker, name)` · `holding(account_id, security_id, as_of, qty, cost_basis, ticker, market_value, known_at, doc_id)` · `cash_balance(account_id, as_of, amount, known_at)` · `lot(...)`
+- `fund_report(doc_id, fund_id, as_of, known_at, net_assets, total_assets)` · `fund_holding(fund_id, as_of, known_at, doc_id, seq, name, cusip, isin, lei, asset_cat, payoff_profile, country, pct_val, swap_ref, notional, swap_direction, constituent_id, match_method, match_confidence)` — every reported N-PORT line, resolved or not
+- `review_queue(source, source_ref, mention, candidates, proposed_entity_id, confidence, method, status, decided_entity_id)`
+- `connector_cursor(source, cursor)` · `corporate_action(security_id, ticker, kind, ex_date, split_from, split_to, cash_amount, known_at)`
+- `edge(id, src_id, dst_id, type, weight, valid_from, valid_to, confidence, known_at)` — unique on (src, dst, type, valid_from, known_at)
 - `edge_evidence(edge_id, doc_id, section, span_text, url)`
 - `document(id, source, kind, url, published_at, raw_uri, hash)`
 - `document_entity(doc_id, entity_id, confidence, sentiment, relevance)`
-- `price_bar(security_id, ts, o, h, l, c, v)` (hypertable)
+- `price_bar(security_id, ticker, ts, o, h, l, c, v, vwap, source, known_at)` (hypertable; unadjusted; keyed with the ticker so share classes do not collide, ADR 0006)
 - `factor_return(factor, date, ret)` · `factor_loading(security_id, factor, beta, window_end)`
 - `calendar_event(id, entity_id?, type, scheduled_at, confirmed, source)`
 - `event_study(entity_id, event_type, window, n, mean_ret, median_ret, p25, p75, computed_at)`
@@ -146,7 +151,7 @@ or send notifications.
 ### Exposure X-ray
 Dollar and % exposure to every company, sector, and country. Flags any node
 above a threshold (e.g. 10%) and computes Herfindahl across top-level companies. Runs nightly and on
-holdings/edge changes. Output: exposure table + Sankey/sunburst.
+holdings/edge changes. Output: exposure table + stacked bars.
 
 ### Attribution ("why did my portfolio move")
 1. Rolling 252-day regression of each holding on market, sector, size, value, momentum.
@@ -196,10 +201,11 @@ record feedback.
 ## API, frontend, workflow builder
 FastAPI REST + WebSocket:
 - `GET /portfolio/exposure` · `GET /portfolio/attribution?date=` · `GET /feed?since=`
+- **Built so far (Phase 2):** `GET /portfolio/exposure?as_of=&top=` (look-through, per-holding composition, exposure bars, flags, caveats), `GET /edges/{id}/evidence`, `GET /health`. Read-only, no login, bind to 127.0.0.1; expose only over Tailscale or an auth proxy. The rest below are not built.
 - `GET /timeline?from=&to=` · `GET /entities/{id}` · `GET /signals?module=&entity=`
 - `GET/POST /alerts` · `POST /alerts/{id}/feedback` · CRUD `/rules` · `WS /stream`
 
-Pages: Home, Exposure (Sankey with clickable evidence), Timeline, Entity, Alerts inbox, Review queue.
+Pages: Home, Exposure (a drill-down: portfolio → holding → filed evidence, with a by-company lens), Timeline, Entity, Alerts inbox, Review queue.
 
 Workflow-builder nodes (trading platform): Sources (Holdings, Entity Signals, News Feed, Calendar),
 Transforms (Exposure Filter, Event Study, Sentiment Z-Score, Insider Cluster), Logic (Threshold,
@@ -218,7 +224,7 @@ AND/OR, Cooldown), Sinks (Alert, Digest, Webhook). Nodes call the same API.
 | Analytics | pandas/Polars, statsmodels, NumPy | DuckDB |
 | NLP | FinBERT-style classifier, sentence-transformers | — |
 | LLM | Claude API with prompt caching | smaller model for volume |
-| Frontend | React + TypeScript + ECharts/D3 (ADR 0003) | Plotly |
+| Frontend | React + TypeScript, plain SVG (ADR 0003; ECharts/D3 if needed) | Plotly |
 | Notifications | Discord/Telegram, SMTP, ntfy | web push |
 | Infra | Docker Compose on home server / small VM | k8s only if multi-user |
 | Observability | structured logs, Prometheus + Grafana | Sentry |
@@ -244,5 +250,5 @@ AND/OR, Cooldown), Sinks (Alert, Digest, Webhook). Nodes call the same API.
 - ~~Market-data provider~~ Decided: Massive free for the PoC (ADR 0005).
 - Brokerage aggregator, and broker support.
 - ~~E*TRADE read-only access~~ Moot: the E*TRADE API connector was dropped (ADR 0002 superseded).
-- Dashboard as a separate app or pages inside the trading platform.
+- ~~Dashboard as a separate app or pages inside the trading platform.~~ Decided 2026-11-08: a separate app in `frontend/` (ADR 0003).
 - 13F manager watchlist.

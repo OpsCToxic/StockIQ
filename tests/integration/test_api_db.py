@@ -4,7 +4,6 @@ The API reads through the `get_conn` dependency, which these tests replace with 
 is rolled back, so no test commits a row to the real database.
 """
 
-from collections import defaultdict
 from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any
@@ -105,47 +104,57 @@ def _get(path: str, **params: Any) -> Any:
     return TestClient(app).get(path, params=params)
 
 
-def test_exposure_reconciles_and_the_sankey_conserves_value(conn: Connection) -> None:
+def test_exposure_reconciles_and_each_holdings_segments_add_up_to_its_value(
+    conn: Connection,
+) -> None:
     _seed(conn)
-    r = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z", top=15)
-    assert r.status_code == 200
-    body = r.json()
+    body = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z").json()
     assert body["reconciles"] is True
     assert Decimal(body["total_value"]) == Decimal(1550)
-    links = body["sankey"]["links"]
-    out_of_portfolio = sum(Decimal(x["value"]) for x in links if x["source"] == "portfolio")
-    assert out_of_portfolio == Decimal(1550)  # holdings plus cash
-    into: dict[str, Decimal] = defaultdict(Decimal)
-    out: dict[str, Decimal] = defaultdict(Decimal)
-    for x in links:
-        into[x["target"]] += Decimal(x["value"])
-        out[x["source"]] += Decimal(x["value"])
-    for node in body["sankey"]["nodes"]:
-        if node["kind"] == "holding":
-            assert into[node["id"]] == out[node["id"]], node  # nothing appears or vanishes
+    holdings = {h["holding"]: h for h in body["holdings"]}
+    assert set(holdings) == {"LEV", "AAA"}
+    for h in holdings.values():
+        assert sum(Decimal(s["value"]) for s in h["segments"]) == Decimal(h["value"])
+    # the holdings, plus cash, are the whole portfolio
+    assert sum(Decimal(h["value"]) for h in body["holdings"]) + Decimal(body["cash"]) == Decimal(
+        body["total_value"]
+    )
 
 
-def test_swap_exposure_is_kept_out_of_the_funded_flows(conn: Connection) -> None:
+def test_a_funds_segments_name_its_stock_and_the_gap_and_a_direct_holding_is_one_segment(
+    conn: Connection,
+) -> None:
+    _seed(conn)
+    body = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z").json()
+    holdings = {h["holding"]: h for h in body["holdings"]}
+    lev = [(s["kind"], s["label"]) for s in holdings["LEV"]["segments"]]
+    assert ("stock", "STOCK-A") in lev and ("stock", "STOCK-B") in lev
+    assert ("unmatched", "Equity not matched to a company") in lev
+    assert holdings["LEV"]["report_as_of"] == "2026-03-31"
+    assert [s["label"] for s in holdings["AAA"]["segments"]] == ["STOCK-A"]
+    assert holdings["AAA"]["report_as_of"] is None
+
+
+def test_exposure_bars_add_the_swap_to_the_stock_and_pass_one_hundred_percent(
+    conn: Connection,
+) -> None:
     ids = _seed(conn)
     body = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z").json()
-    assert all(x["kind"] != "swap" for x in body["sankey"]["links"])
-    (swap,) = body["sankey"]["swap_links"]
-    assert Decimal(swap["value"]) == Decimal(1800) and swap["edge_id"] == ids["swap_a"]
-    econ = {x["name"]: Decimal(x["share"]) for x in body["economic_companies"]}
-    assert econ["STOCK-A"] > 1  # more than 100% of the money, because of the swap
+    bars = {b["name"]: b for b in body["exposure"]}
+    a = bars["STOCK-A"]
+    assert Decimal(a["funded"]) == Decimal(700) and Decimal(a["swap"]) == Decimal(1800)
+    assert Decimal(a["total_share"]) > 1 and a["swap_edge_id"] == ids["swap_a"]
+    assert Decimal(bars["STOCK-B"]["swap"]) == 0
     assert any(f["basis"] == "economic" and f["name"] == "STOCK-A" for f in body["flags"])
 
 
-def test_top_folds_the_rest_into_one_node_without_losing_value(conn: Connection) -> None:
+def test_top_folds_the_smaller_companies_inside_a_holding(conn: Connection) -> None:
     _seed(conn)
     body = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z", top=1).json()
-    assert "other" in {n["kind"] for n in body["sankey"]["nodes"]}
-    links = body["sankey"]["links"]
-    to_companies = sum(
-        Decimal(x["value"]) for x in links if x["target"].startswith("c:") or x["target"] == "other"
-    )
-    unlooked = sum(Decimal(x["value"]) for x in links if x["target"] == "unlooked")
-    assert to_companies + unlooked + Decimal(body["cash"]) == Decimal(1550)
+    lev = next(h for h in body["holdings"] if h["holding"] == "LEV")
+    labels = [s["label"] for s in lev["segments"] if s["kind"] == "stock"]
+    assert labels == ["STOCK-A", "Other companies (1)"]
+    assert sum(Decimal(s["value"]) for s in lev["segments"]) == Decimal(lev["value"])
 
 
 def test_evidence_endpoint_returns_the_filed_text_and_url(conn: Connection) -> None:
@@ -177,3 +186,13 @@ def test_health_and_openapi_are_served() -> None:
     assert client.get("/health").json() == {"status": "ok"}
     paths = client.get("/openapi.json").json()["paths"]
     assert "/portfolio/exposure" in paths and "/edges/{edge_id}/evidence" in paths
+
+
+def test_the_breakdown_carries_each_filed_line(conn: Connection) -> None:
+    _seed(conn)
+    body = _get("/portfolio/exposure", as_of="2026-07-01T00:00:00Z").json()
+    parts = {b["bucket"]: b for b in body["breakdown"]}
+    unmatched = parts["unmatched_equity"]
+    assert unmatched["lines"] == 1 and len(unmatched["items"]) == 1
+    item = unmatched["items"][0]
+    assert Decimal(item["your_value"]) == Decimal(300) and item["counterparty"] is None

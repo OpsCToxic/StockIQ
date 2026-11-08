@@ -8,8 +8,8 @@ import sys
 from datetime import UTC, datetime
 
 from stockiq.core.db import get_engine
-from stockiq.graph.__main__ import render
 from stockiq.graph.exposure import Exposure, look_through
+from stockiq.graph.report import render
 from stockiq.modules.exposure.concentration import Concentration, concentration
 
 

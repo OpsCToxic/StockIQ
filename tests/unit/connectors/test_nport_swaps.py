@@ -47,3 +47,54 @@ def test_unparseable_swaps_are_skipped_not_guessed() -> None:
     assert _parse_swap(_swap_el("x", "y", ref="N/A")) == (None, None, None)  # type: ignore[arg-type]
     plain = fromstring(f'<invstOrSec xmlns="{NS[1:-1]}"><name>x</name></invstOrSec>')
     assert _parse_swap(plain) == (None, None, None)
+
+
+def _swap_xml(recv: str, pay: str, notional: str = "100", ref: str = "TSLA") -> object:
+    xml = f"""<invstOrSec xmlns="{NS[1:-1]}"><derivativeInfo><swapDeriv>
+      <descRefInstrmnt><indexBasketInfo><indexIdentifier>{ref}</indexIdentifier>
+        </indexBasketInfo></descRefInstrmnt>
+      {recv}{pay}<notionalAmt>{notional}</notionalAmt></swapDeriv></derivativeInfo></invstOrSec>"""
+    return fromstring(xml)
+
+
+REF = '<floatingRecDesc floatingRtIndex="Total Return on Tesla"/>'
+RATE_PAY = '<floatingPmntDesc floatingRtIndex="1 month SOFR + spread"/>'
+
+
+def test_a_fixed_receive_leg_with_a_reference_pay_leg_is_short() -> None:
+    el = _swap_xml(
+        '<fixedRecDesc fixedRt="4.5"/>', '<floatingPmntDesc floatingRtIndex="Tesla TR"/>'
+    )
+    assert _parse_swap(el)[2] == "short"  # type: ignore[arg-type]
+
+
+def test_two_rate_legs_or_two_reference_legs_are_unclear_and_skipped() -> None:
+    both_rate = _swap_xml('<floatingRecDesc floatingRtIndex="SOFR"/>', RATE_PAY)
+    both_ref = _swap_xml(REF, '<floatingPmntDesc floatingRtIndex="Return on Tesla"/>')
+    assert _parse_swap(both_rate) == (None, None, None)  # type: ignore[arg-type]
+    assert _parse_swap(both_ref) == (None, None, None)  # type: ignore[arg-type]
+
+
+def test_a_missing_leg_is_unclear_and_skipped() -> None:
+    assert _parse_swap(_swap_xml(REF, "")) == (None, None, None)  # type: ignore[arg-type]
+
+
+def test_a_negative_notional_does_not_flip_the_direction() -> None:
+    ref, notional, direction = _parse_swap(_swap_xml(REF, RATE_PAY, notional="-250"))  # type: ignore[arg-type]
+    assert (ref, notional, direction) == ("TSLA", Decimal("250"), "long")
+
+
+def test_each_swap_names_its_counterparty() -> None:
+    report = parse_report((FIX / "nport_tsll.xml").read_bytes(), "acc", KNOWN)
+    counterparties = {h.counterparty for h in report.holdings if h.swap_ref}
+    assert counterparties == {
+        "Barclays Bank PLC",
+        "BNP Paribas",
+        "Citibank National Association",
+        "Goldman Sachs & Co. LLC",
+        "J.P. MORGAN SECURITIES LLC.",
+        "Bank of America N.A. (formerly Merrill Lynch)",
+        "Nomura Global Financial Products Inc.",
+    }
+    equities = [h for h in report.holdings if h.asset_cat == "EC"]
+    assert all(h.counterparty is None for h in equities)

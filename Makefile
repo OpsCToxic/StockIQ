@@ -1,4 +1,4 @@
-.PHONY: up check-env down install test test-all lint invariants migrate gate
+.PHONY: up check-env down install test test-all lint invariants migrate gate api frontend frontend-check
 
 up: check-env
 	docker compose up -d
@@ -36,3 +36,12 @@ migrate:
 gate:
 	@test -n "$(PHASE)" || (echo "usage: make gate PHASE=N" && exit 1)
 	uv run python scripts/gate.py $(PHASE)
+
+api:
+	uv run uvicorn stockiq.api.app:app --host 127.0.0.1 --port 8000
+
+frontend:
+	cd frontend && npm install && npm run dev
+
+frontend-check:
+	cd frontend && npm run typecheck && npm test && npm run build

@@ -19,6 +19,7 @@ from sqlalchemy import Connection, text
 
 from stockiq.connectors.base import BaseConnector, Cursor, RawPayload, StoredPayload
 from stockiq.connectors.etrade_csv.models import CsvExport, CsvPosition, CsvRecord
+from stockiq.entities.resolver import Mention, Resolution, resolve
 
 BROKER = "etrade"
 NY = ZoneInfo("America/New_York")
@@ -104,6 +105,7 @@ class EtradeCsvConnector(BaseConnector[CsvRecord]):
         self._path = path
         self._account_name = account_name
         self.imported: CsvExport | None = None
+        self.unresolved: list[tuple[Mention, Resolution]] = []
 
     async def fetch(self, since: Cursor) -> tuple[list[RawPayload], Cursor]:
         body = self._path.read_bytes()
@@ -140,28 +142,22 @@ class EtradeCsvConnector(BaseConnector[CsvRecord]):
         ).scalar_one()
 
         resolved: dict[str, int] = {}
-        problems: list[str] = []
+        self.unresolved = []
         for pos in export.positions:
-            ids = (
-                conn.execute(
-                    text(
-                        """
-                        SELECT DISTINCT entity_id FROM entity_alias
-                        WHERE kind = 'ticker' AND alias = :t AND valid_from <= :at
-                          AND (valid_to IS NULL OR valid_to > :at)
-                        """
-                    ),
-                    {"t": pos.symbol, "at": known_at},
-                )
-                .scalars()
-                .all()
-            )
-            if len(ids) == 1:
-                resolved[pos.symbol] = ids[0]
+            mention = Mention(ticker=pos.symbol)
+            result = resolve(conn, mention, known_at)
+            if result.accepted and result.entity_id is not None:
+                resolved[pos.symbol] = result.entity_id
             else:
-                problems.append(f"{pos.symbol}: {len(ids)} matching entities")
-        if problems:
-            raise ValueError("cannot import, unresolved symbols: " + "; ".join(problems))
+                self.unresolved.append((mention, result))
+        if self.unresolved:
+            # A partial portfolio would be wrong, so nothing is imported. The caller queues these
+            # for review (this transaction rolls back) so they can be fixed and re-imported.
+            names = "; ".join(f"{m.ticker}: {r.method}" for m, r in self.unresolved)
+            raise ValueError(
+                f"cannot import, unresolved symbols: {names}. They are queued for review: "
+                "python -m stockiq.entities.review list"
+            )
         by_entity: dict[int, list[str]] = {}
         for symbol, entity_id in resolved.items():
             by_entity.setdefault(entity_id, []).append(symbol)

@@ -111,3 +111,23 @@ def test_reload_does_not_stack_synthetic_edges(conn: Connection) -> None:
     first = conn.execute(text("SELECT count(*) FROM edge")).scalar_one()
     _load(conn)
     assert conn.execute(text("SELECT count(*) FROM edge")).scalar_one() == first
+
+
+def test_reprocessing_a_filing_refreshes_the_swap_columns_not_just_the_match(
+    conn: Connection,
+) -> None:
+    """Rows stored before the swap columns existed kept NULLs on every re-parse (a bug)."""
+    _seed(conn)
+    _load(conn)
+    conn.execute(
+        text("UPDATE fund_holding SET swap_ref = NULL, notional = NULL, counterparty = NULL")
+    )
+    _load(conn)
+    row = conn.execute(
+        text(
+            "SELECT count(*) AS n, count(DISTINCT counterparty) AS cp, sum(notional) AS notional "
+            "FROM fund_holding WHERE swap_ref = 'TSLA'"
+        )
+    ).one()
+    assert (row.n, row.cp) == (7, 7)
+    assert row.notional == Decimal("5591981553.15")

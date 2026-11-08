@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from stockiq.graph.exposure import Exposure
+from stockiq.graph.exposure import BreakdownPart, Exposure
 from stockiq.modules.exposure.concentration import concentration, herfindahl
 
 
@@ -53,7 +53,7 @@ def test_swaps_show_up_as_economic_exposure_beyond_the_funded_value() -> None:
 def test_buckets_that_are_not_a_single_node_are_never_flagged() -> None:
     x = _exposure({1: "50"})
     x.by_sector = {
-        "Not looked through (fund cash)": D("600"),
+        "Cash, collateral and other (not companies)": D("600"),
         "Cash": D("200"),
         "Unclassified": D("150"),
     }
@@ -72,3 +72,37 @@ def test_a_zero_portfolio_flags_nothing() -> None:
     x = _exposure({1: "50"})
     x.total_value = D("0")
     assert concentration(x).flags == []
+
+
+def test_a_company_whose_name_starts_like_a_bucket_is_still_flagged() -> None:
+    x = _exposure({1: "300"})
+    x.names[1] = "Cash America International"  # not the Cash bucket
+    flags = [f for f in concentration(x).flags if f.kind == "company" and f.basis == "funded"]
+    assert [f.name for f in flags] == ["Cash America International"]
+
+
+def test_two_companies_with_the_same_name_are_not_merged_or_overwritten() -> None:
+    x = _exposure({1: "150", 2: "150"})
+    x.names[1] = x.names[2] = "Acme"
+    flags = [f for f in concentration(x).flags if f.kind == "company" and f.basis == "funded"]
+    assert len(flags) == 2 and sum(f.value for f in flags) == D("300")
+
+
+def _part(bucket: str, value: str) -> BreakdownPart:
+    return BreakdownPart(1, "FND", "Fund", bucket, bucket, D(value), D("0.5"), 3)
+
+
+def test_a_large_share_of_filed_equity_we_could_not_match_gets_a_coverage_flag() -> None:
+    x = _exposure({1: "50"})
+    x.breakdown = [_part("unmatched_equity", "600")]
+    cov = [f for f in concentration(x).flags if f.kind == "coverage"]
+    assert len(cov) == 1 and cov[0].share == D("0.6")
+    x.breakdown = [_part("unmatched_equity", "50")]
+    assert [f for f in concentration(x).flags if f.kind == "coverage"] == []
+
+
+def test_cash_and_collateral_are_not_a_coverage_gap() -> None:
+    """TSLL's money-market collateral is not company exposure; it must not read as unexamined."""
+    x = _exposure({1: "50"})
+    x.breakdown = [_part("cash", "900"), _part("derivatives", "-300")]
+    assert [f for f in concentration(x).flags if f.kind == "coverage"] == []

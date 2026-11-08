@@ -26,8 +26,8 @@ Python for the backend (FastAPI), React for the frontend. Go is not adopted.
   from FastAPI's OpenAPI spec so request and response types stay in sync.
 - The frontend lives outside `src/stockiq/` so the Python tooling (ruff, mypy, the invariant
   checker) does not touch it. Add a `frontend/` folder when the first page is built.
-- Whether the dashboard is a separate app or pages inside the trading platform is still Cameron's
-  call and is still open.
+- **Decided 2026-11-08 (Cameron): the dashboard is a separate app** in `frontend/`, not pages inside
+  the trading platform. The workflow-builder nodes in the trading platform still call the same API.
 - No frontend work starts before the roadmap reaches it. The first screen is the Exposure page
   (Phase 2).
 

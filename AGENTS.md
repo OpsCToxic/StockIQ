@@ -95,5 +95,5 @@ make gate PHASE=N  # run the phase gate checks listed in docs/roadmap.md
   Every analytics query that touches time has a test in `tests/pit/`.
 - Run `make lint test` (includes `scripts/check_invariants.py`) before saying work is done.
   Report failures honestly.
-- Open questions from the architecture (brokerage aggregator, dashboard
-  placement, 13F watchlist) are Cameron's calls — ask, don't decide.
+- Open questions from the architecture (brokerage aggregator, 13F watchlist) are Cameron's
+  calls — ask, don't decide. The dashboard is decided: a separate app in `frontend/` (ADR 0003).

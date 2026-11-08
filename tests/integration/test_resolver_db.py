@@ -193,3 +193,77 @@ def test_accepting_an_unknown_entity_is_refused(conn: Connection) -> None:
     (item,) = review.pending(conn)
     with pytest.raises(ValueError, match="no entity"):
         review.accept(conn, int(item["id"]), 999999999)  # type: ignore[arg-type]
+
+
+def test_accepting_one_candidate_does_not_disable_the_others_name_matching(
+    conn: Connection,
+) -> None:
+    """'Fox Corp' and 'Fox Corp /DE/' normalise alike. Accepting B must not close A's own name."""
+    a, b = _company(conn, "Fox Corp"), _company(conn, "Fox Corp /DE/")
+    ensure_name_aliases(conn)
+    mention = Mention(name="Fox Corporation")
+    first = resolve(conn, mention, NOW)
+    assert first.method == "ambiguous_name"
+    review.enqueue(conn, "t", "fox", mention, first)
+    (item,) = review.pending(conn)
+    review.accept(conn, int(item["id"]), b)  # type: ignore[arg-type]
+    # The reviewer's choice settles the mention for good, and A still has its canonical name.
+    assert resolve(conn, mention, NOW).entity_id == b
+    still_open = conn.execute(
+        text(
+            "SELECT count(*) FROM entity_alias WHERE entity_id = :a AND kind = 'name' "
+            "AND valid_to IS NULL"
+        ),
+        {"a": a},
+    ).scalar_one()
+    assert still_open == 1
+    # ...and the evaluation (reviewed aliases off) still sees the original ambiguity.
+    assert resolve(conn, mention, NOW, use_learned=False).method == "ambiguous_name"
+
+
+def test_a_reviewed_ticker_applies_to_an_older_filing_on_reparse(conn: Connection) -> None:
+    brk = _company(conn, "Berkshire Hathaway Inc")
+    mention = Mention(ticker="BRK/B")
+    first = resolve(conn, mention, datetime(2026, 8, 29, tzinfo=UTC))
+    assert first.entity_id is None
+    review.enqueue(conn, "t", "brk", mention, first)
+    (item,) = review.pending(conn)
+    review.accept(conn, int(item["id"]), brk)  # type: ignore[arg-type]
+    again = resolve(conn, mention, datetime(2026, 8, 29, tzinfo=UTC))  # before the decision date
+    assert (again.entity_id, again.confidence) == (brk, Decimal("1.0"))
+
+
+def test_a_current_ticker_projected_onto_an_old_document_is_only_provisional(
+    conn: Connection,
+) -> None:
+    meta = _company(conn, "Meta Platforms Inc")
+    conn.execute(
+        text(
+            "INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at) "
+            "VALUES (:e, 'META', 'ticker', 'sec_company_tickers', '1970-01-01', '2026-11-08')"
+        ),
+        {"e": meta},
+    )
+    recent = resolve(conn, Mention(ticker="META"), datetime(2026, 9, 1, tzinfo=UTC))
+    old = resolve(conn, Mention(ticker="META"), datetime(2021, 6, 1, tzinfo=UTC))
+    assert (recent.entity_id, recent.confidence) == (meta, Decimal("0.95"))
+    assert old.entity_id == meta and old.method == "ticker:assumed_history"
+    assert old.confidence == Decimal("0.85") and old.needs_review  # linked, but a reviewer decides
+
+
+def test_a_renamed_company_gets_a_new_name_alias_and_loses_the_old_one(conn: Connection) -> None:
+    fb = _company(conn, "Facebook Inc")
+    ensure_name_aliases(conn)
+    assert resolve(conn, Mention(name="Facebook"), NOW).entity_id == fb
+    conn.execute(text("UPDATE entity SET name = 'Meta Platforms Inc' WHERE id = :e"), {"e": fb})
+    ensure_name_aliases(conn)
+    assert resolve(conn, Mention(name="Meta Platforms"), NOW).entity_id == fb
+    assert resolve(conn, Mention(name="Facebook"), NOW).entity_id is None
+    open_names = conn.execute(
+        text(
+            "SELECT count(*) FROM entity_alias WHERE entity_id = :e AND kind = 'name' "
+            "AND valid_to IS NULL"
+        ),
+        {"e": fb},
+    ).scalar_one()
+    assert open_names == 1

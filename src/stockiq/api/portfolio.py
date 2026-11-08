@@ -1,20 +1,26 @@
-"""Exposure X-ray API: response models, Sankey construction, and the routes.
+"""Exposure X-ray API: response models and the routes.
 
-`GET /portfolio/exposure?as_of=&top=` returns the look-through exposure with a Sankey graph and
-the concentration flags. `GET /edges/{id}/evidence` returns what backs a flow in the Sankey.
+`GET /portfolio/exposure?as_of=&top=` returns the look-through exposure: what each holding is
+made of, what your money really rides on, the concentration flags and the caveats.
+`GET /edges/{id}/evidence` returns the filing text behind a segment or a swap.
 Read-only. The clock is read here, at the edge; everything below takes an explicit `as_of`.
 """
 
-from collections import defaultdict
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import Connection, text
 
+from stockiq.api.composition import (
+    ExposureBarOut,
+    HoldingOut,
+    build_exposure_bars,
+    build_holdings,
+)
 from stockiq.core.db import get_engine
 from stockiq.graph.exposure import Exposure, look_through
 from stockiq.modules.exposure.concentration import Concentration, concentration
@@ -27,28 +33,6 @@ class Line(BaseModel):
     name: str
     value: Decimal
     share: Decimal  # of the portfolio's value; economic shares can exceed 1
-
-
-class SankeyNode(BaseModel):
-    id: str
-    label: str
-    kind: Literal["portfolio", "holding", "company", "other", "unlooked", "cash"]
-
-
-class SankeyLink(BaseModel):
-    source: str
-    target: str
-    value: Decimal
-    kind: Literal["direct", "fund", "swap", "unlooked", "cash", "other"]
-    edge_id: int | None = None  # fetch /edges/{edge_id}/evidence for the source behind this flow
-    confidence: Decimal | None = None
-    provisional: bool = False
-
-
-class Sankey(BaseModel):
-    nodes: list[SankeyNode]
-    links: list[SankeyLink]  # funded value only: flows add up to the portfolio
-    swap_links: list[SankeyLink]  # swap exposure on top of that; it is not money you hold
 
 
 class FlagOut(BaseModel):
@@ -66,6 +50,35 @@ class HerfindahlOut(BaseModel):
     effective_n: Decimal
     companies: int
     covered_fraction: Decimal
+
+
+class BreakdownItemOut(BaseModel):
+    """One filed line inside a breakdown category: a money-market fund, a swap, a debt holding."""
+
+    name: str
+    title: str | None
+    your_value: Decimal  # dollars of your holding
+    fund_value: Decimal | None  # the line's own value in the fund, as filed (USD)
+    fund_share: Decimal | None  # of the fund's net assets
+    notional: Decimal | None  # swaps only
+    counterparty: str | None  # swaps only: who is on the other side
+    direction: str | None  # swaps only: "long" if the fund receives the reference's return
+    reference: str | None  # swaps only: what it follows
+    edge_id: int | None  # fetch /edges/{edge_id}/evidence for the filing text behind a swap
+
+
+class BreakdownOut(BaseModel):
+    """One slice of a fund's non-company remainder, by the filing's own asset category."""
+
+    holding: str
+    fund: str
+    bucket: str
+    label: str
+    value: Decimal  # dollars of your holding; derivatives can be negative
+    share: Decimal  # of your portfolio
+    fund_share: Decimal  # of the fund's net assets
+    lines: int
+    items: list[BreakdownItemOut]
 
 
 class NotLookedThroughOut(BaseModel):
@@ -90,8 +103,10 @@ class ExposureResponse(BaseModel):
     divisions: list[Line]
     countries: list[Line]
     not_looked_through: list[NotLookedThroughOut]
+    breakdown: list[BreakdownOut]
     fund_report_dates: dict[str, date]
-    sankey: Sankey
+    holdings: list[HoldingOut]  # what each holding is made of; segments add up to its value
+    exposure: list[ExposureBarOut]  # your exposure by company, funded plus swaps
     flags: list[FlagOut]
     herfindahl: list[HerfindahlOut]
     caveats: list[str]
@@ -125,88 +140,6 @@ def _lines(values: dict[str, Decimal], total: Decimal, limit: int | None = None)
     return [Line(name=n, value=v, share=v / total if total else Decimal(0)) for n, v in ranked]
 
 
-def build_sankey(x: Exposure, top: int) -> Sankey:
-    """Portfolio -> holdings -> companies. The `top` companies by funded value are shown; the rest
-    are folded into one 'other companies' node so the graph stays readable."""
-    funded = [p for p in x.paths if p.kind in ("direct", "fund")]
-    totals: dict[int, Decimal] = defaultdict(Decimal)
-    for p in funded:
-        totals[p.company_id] += p.value
-    shown = {cid for cid, _ in sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:top]}
-
-    nodes: dict[str, SankeyNode] = {
-        "portfolio": SankeyNode(id="portfolio", label="Your portfolio", kind="portfolio")
-    }
-    links: list[SankeyLink] = []
-    to_holding: dict[str, Decimal] = defaultdict(Decimal)
-    folded: dict[str, Decimal] = defaultdict(Decimal)
-
-    def hold(hid: int, label: str) -> str:
-        nid = f"h:{hid}"
-        nodes.setdefault(nid, SankeyNode(id=nid, label=label, kind="holding"))
-        return nid
-
-    for p in funded:
-        h = hold(p.holding_id, p.holding)
-        to_holding[h] += p.value
-        if p.company_id in shown:
-            cid = f"c:{p.company_id}"
-            nodes.setdefault(cid, SankeyNode(id=cid, label=x.names[p.company_id], kind="company"))
-            links.append(
-                SankeyLink(
-                    source=h,
-                    target=cid,
-                    value=p.value,
-                    kind="direct" if p.kind == "direct" else "fund",
-                    edge_id=p.edge_id,
-                    confidence=p.confidence,
-                    provisional=p.confidence is not None and p.confidence < PROVISIONAL_BELOW,
-                )
-            )
-        else:
-            folded[h] += p.value
-    if folded:
-        nodes["other"] = SankeyNode(id="other", label="Other companies", kind="other")
-        links += [
-            SankeyLink(source=h, target="other", value=v, kind="other") for h, v in folded.items()
-        ]
-    for n in x.not_looked_through:
-        h = hold(n.holding_id, n.holding or n.label)
-        nodes.setdefault(
-            "unlooked", SankeyNode(id="unlooked", label="Not looked through", kind="unlooked")
-        )
-        to_holding[h] += n.value
-        links.append(SankeyLink(source=h, target="unlooked", value=n.value, kind="unlooked"))
-    if x.cash:
-        nodes["cash"] = SankeyNode(id="cash", label="Cash", kind="cash")
-        links.append(SankeyLink(source="portfolio", target="cash", value=x.cash, kind="cash"))
-    links += [
-        SankeyLink(source="portfolio", target=h, value=v, kind="fund")
-        for h, v in to_holding.items()
-    ]
-
-    swaps = [
-        SankeyLink(
-            source=f"h:{p.holding_id}",
-            target=f"c:{p.company_id}",
-            value=p.value,
-            kind="swap",
-            edge_id=p.edge_id,
-            confidence=p.confidence,
-            provisional=p.confidence is not None and p.confidence < PROVISIONAL_BELOW,
-        )
-        for p in x.paths
-        if p.kind == "swap"
-    ]
-    for p in x.paths:
-        if p.kind == "swap":
-            nodes.setdefault(
-                f"c:{p.company_id}",
-                SankeyNode(id=f"c:{p.company_id}", label=x.names[p.company_id], kind="company"),
-            )
-    return Sankey(nodes=list(nodes.values()), links=links, swap_links=swaps)
-
-
 def build_response(x: Exposure, c: Concentration, top: int) -> ExposureResponse:
     total = x.total_value
     named_funded = {x.names[i]: v for i, v in x.by_company.items()}
@@ -227,6 +160,12 @@ def build_response(x: Exposure, c: Concentration, top: int) -> ExposureResponse:
         caveats.append(
             "Swap exposure is the filed notional over fund net assets at the fund's report date; "
             "leveraged funds rebalance daily, so treat it as approximate."
+        )
+    if x.breakdown:
+        caveats.append(
+            "The remainder of each fund (cash, collateral, derivatives) is not company exposure. "
+            "Derivatives are at fair value, so they can be negative, and money-market holdings can "
+            "exceed 100% of a fund that holds swaps."
         )
     caveats.append(
         "Industries use SEC SIC codes: free but coarse (for example Manufacturing covers hardware, "
@@ -250,6 +189,34 @@ def build_response(x: Exposure, c: Concentration, top: int) -> ExposureResponse:
         industries=_lines(x.by_sector, total, 25),
         divisions=_lines(x.by_division, total),
         countries=_lines(x.by_country, total),
+        breakdown=[
+            BreakdownOut(
+                holding=p.holding,
+                fund=p.fund,
+                bucket=p.bucket,
+                label=p.label,
+                value=p.value,
+                share=p.value / total if total else Decimal(0),
+                fund_share=p.fund_share,
+                lines=p.lines,
+                items=[
+                    BreakdownItemOut(
+                        name=i.name,
+                        title=i.title,
+                        your_value=i.your_value,
+                        fund_value=i.fund_value,
+                        fund_share=i.fund_share,
+                        notional=i.notional,
+                        counterparty=i.counterparty,
+                        direction=i.direction,
+                        reference=i.reference,
+                        edge_id=i.edge_id,
+                    )
+                    for i in p.items
+                ],
+            )
+            for p in x.breakdown
+        ],
         not_looked_through=[
             NotLookedThroughOut(
                 holding=n.holding or n.label,
@@ -261,7 +228,8 @@ def build_response(x: Exposure, c: Concentration, top: int) -> ExposureResponse:
             for n in x.not_looked_through
         ],
         fund_report_dates=x.fund_report_dates,
-        sankey=build_sankey(x, top),
+        holdings=build_holdings(x, top),
+        exposure=build_exposure_bars(x),
         flags=[
             FlagOut(
                 kind=f.kind,
@@ -297,7 +265,7 @@ def get_conn() -> Iterator[Connection]:
 def portfolio_exposure(
     conn: Annotated[Connection, Depends(get_conn)],
     as_of: datetime | None = None,
-    top: Annotated[int, Query(ge=1, le=100)] = 15,
+    top: Annotated[int, Query(ge=1, le=1000)] = 15,
 ) -> ExposureResponse:
     when = as_of or datetime.now(UTC)
     if when.tzinfo is None:

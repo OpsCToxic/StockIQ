@@ -11,3 +11,6 @@ __pycache__/
 .ruff_cache/
 .dagster/
 .claude/settings.local.json
+frontend/node_modules/
+frontend/dist/
+.playwright-mcp/

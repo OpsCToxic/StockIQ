@@ -1,0 +1,20 @@
+# Secrets and real data never enter the build context.
+.env
+.env.*
+!.env.example
+secrets/
+data/
+
+.git/
+.venv/
+.claude/
+.playwright-mcp/
+.*_cache/
+__pycache__/
+*.pyc
+
+frontend/
+tests/
+docs/
+migrations/
+scripts/

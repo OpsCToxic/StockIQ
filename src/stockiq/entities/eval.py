@@ -43,10 +43,13 @@ class Scored:
     entity_name: str | None
     confidence: float
     method: str
+    entity_id: int | None = None
 
     @property
     def linked(self) -> bool:
-        return self.entity_cik is not None
+        # By entity id, not CIK: a link to a fund or private entity (no CIK) is still a link, and a
+        # wrong one must count against precision rather than drop out of the denominator.
+        return self.entity_id is not None or self.entity_cik is not None
 
     @property
     def correct(self) -> bool:
@@ -78,8 +81,22 @@ def score(conn: Connection, rows: list[dict[str, str]], as_of: datetime) -> list
                 text("SELECT cik, name FROM entity WHERE id = :i"), {"i": r.entity_id}
             ).one()
             cik, name = e.cik, e.name
-        out.append(Scored(row, cik, name, float(r.confidence), r.method))
+        out.append(
+            Scored(
+                row, cik, name, float(r.confidence), r.method, r.entity_id if r.accepted else None
+            )
+        )
     return out
+
+
+def wilson_lower(correct: int, n: int, z: float = 1.96) -> float:
+    """95% lower confidence bound for a proportion. 127 of 127 is about 97%, not a certain 100%."""
+    if n == 0:
+        return 0.0
+    p = correct / n
+    centre = p + z * z / (2 * n)
+    margin = z * ((p * (1 - p) + z * z / (4 * n)) / n) ** 0.5
+    return float((centre - margin) / (1 + z * z / n))
 
 
 def summarise(scored: list[Scored]) -> dict[str, float]:
@@ -91,15 +108,22 @@ def summarise(scored: list[Scored]) -> dict[str, float]:
         "linked": len(linked),
         "correct": len(correct),
         "precision": len(correct) / len(linked) if linked else 0.0,
+        "precision_low": wilson_lower(len(correct), len(linked)),
         "recall": len(correct) / len(labelled) if labelled else 0.0,
     }
+
+
+def unreviewed_scored(scored: list[Scored]) -> int:
+    """Scored rows (those with an expected company) that no person has marked reviewed."""
+    return sum(1 for s in scored if s.row["expected_cik"] and s.row["reviewed"].lower() != "yes")
 
 
 def report(scored: list[Scored]) -> str:
     s = summarise(scored)
     lines = [
         f"labelled rows {s['labelled']:.0f}, linked {s['linked']:.0f}, correct {s['correct']:.0f}",
-        f"precision {s['precision']:.1%}   recall {s['recall']:.1%}",
+        f"precision {s['precision']:.1%} (95% lower bound {s['precision_low']:.1%})   "
+        f"recall {s['recall']:.1%} (over labelled rows only)",
     ]
     by_method: Counter[str] = Counter()
     wrong_by_method: Counter[str] = Counter()
@@ -207,6 +231,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--source", required=True)
     ap.add_argument("--n", type=int, default=150)
     ap.add_argument("--min-precision", type=float, default=0.90)
+    ap.add_argument(
+        "--allow-unreviewed",
+        action="store_true",
+        help="development only: let the gate pass while scored labels lack a person's review",
+    )
     args = ap.parse_args(argv)
     if args.command == "build-gold":
         key = get_settings().openfigi_api_key.get_secret_value()
@@ -225,7 +254,15 @@ def main(argv: list[str]) -> int:
     if precision < args.min_precision:
         print(f"GATE FAIL: precision {precision:.1%} is below {args.min_precision:.0%}")
         return 1
-    print(f"GATE PASS: precision {precision:.1%} >= {args.min_precision:.0%} (labels unreviewed?)")
+    unreviewed = unreviewed_scored(scored)
+    if unreviewed and not args.allow_unreviewed:
+        # Silver labels only: passing here would mean agreeing with ourselves.
+        print(
+            f"GATE UNVERIFIED: precision {precision:.1%} meets {args.min_precision:.0%}, but "
+            f"{unreviewed} scored labels have not been reviewed by a person (reviewed=yes)."
+        )
+        return 1
+    print(f"GATE PASS: precision {precision:.1%} >= {args.min_precision:.0%}, labels reviewed")
     return 0
 
 

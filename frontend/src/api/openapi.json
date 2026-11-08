@@ -1,0 +1,945 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "StockIQ",
+    "description": "Personal portfolio intelligence: look-through exposure and its evidence.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/portfolio/exposure": {
+      "get": {
+        "summary": "Portfolio Exposure",
+        "operationId": "portfolio_exposure_portfolio_exposure_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 15,
+              "title": "Top"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExposureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/edges/{edge_id}/evidence": {
+      "get": {
+        "summary": "Edge Evidence",
+        "operationId": "edge_evidence_edges__edge_id__evidence_get",
+        "parameters": [
+          {
+            "name": "edge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Edge Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BreakdownItemOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "your_value": {
+            "type": "string",
+            "title": "Your Value"
+          },
+          "fund_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Value"
+          },
+          "fund_share": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Share"
+          },
+          "notional": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notional"
+          },
+          "counterparty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "edge_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "title",
+          "your_value",
+          "fund_value",
+          "fund_share",
+          "notional",
+          "counterparty",
+          "direction",
+          "reference",
+          "edge_id"
+        ],
+        "title": "BreakdownItemOut",
+        "description": "One filed line inside a breakdown category: a money-market fund, a swap, a debt holding."
+      },
+      "BreakdownOut": {
+        "properties": {
+          "holding": {
+            "type": "string",
+            "title": "Holding"
+          },
+          "fund": {
+            "type": "string",
+            "title": "Fund"
+          },
+          "bucket": {
+            "type": "string",
+            "title": "Bucket"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          },
+          "fund_share": {
+            "type": "string",
+            "title": "Fund Share"
+          },
+          "lines": {
+            "type": "integer",
+            "title": "Lines"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "holding",
+          "fund",
+          "bucket",
+          "label",
+          "value",
+          "share",
+          "fund_share",
+          "lines",
+          "items"
+        ],
+        "title": "BreakdownOut",
+        "description": "One slice of a fund's non-company remainder, by the filing's own asset category."
+      },
+      "EvidenceOut": {
+        "properties": {
+          "doc_id": {
+            "type": "integer",
+            "title": "Doc Id"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "span_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Text"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_id",
+          "section",
+          "span_text",
+          "url",
+          "source",
+          "published_at"
+        ],
+        "title": "EvidenceOut"
+      },
+      "EvidenceResponse": {
+        "properties": {
+          "edge_id": {
+            "type": "integer",
+            "title": "Edge Id"
+          },
+          "edge_type": {
+            "type": "string",
+            "title": "Edge Type"
+          },
+          "from_entity": {
+            "type": "string",
+            "title": "From Entity"
+          },
+          "to_entity": {
+            "type": "string",
+            "title": "To Entity"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Known At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceOut"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "edge_id",
+          "edge_type",
+          "from_entity",
+          "to_entity",
+          "weight",
+          "confidence",
+          "known_at",
+          "total",
+          "evidence"
+        ],
+        "title": "EvidenceResponse"
+      },
+      "ExposureBarOut": {
+        "properties": {
+          "company_id": {
+            "type": "integer",
+            "title": "Company Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "funded": {
+            "type": "string",
+            "title": "Funded"
+          },
+          "swap": {
+            "type": "string",
+            "title": "Swap"
+          },
+          "funded_share": {
+            "type": "string",
+            "title": "Funded Share"
+          },
+          "swap_share": {
+            "type": "string",
+            "title": "Swap Share"
+          },
+          "total_share": {
+            "type": "string",
+            "title": "Total Share"
+          },
+          "swap_edge_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swap Edge Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "company_id",
+          "name",
+          "funded",
+          "swap",
+          "funded_share",
+          "swap_share",
+          "total_share"
+        ],
+        "title": "ExposureBarOut"
+      },
+      "ExposureResponse": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "snapshot_as_of": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "type": "object",
+            "title": "Snapshot As Of"
+          },
+          "total_value": {
+            "type": "string",
+            "title": "Total Value"
+          },
+          "cash": {
+            "type": "string",
+            "title": "Cash"
+          },
+          "reconciles": {
+            "type": "boolean",
+            "title": "Reconciles"
+          },
+          "covered_fraction": {
+            "type": "string",
+            "title": "Covered Fraction"
+          },
+          "provisional_value": {
+            "type": "string",
+            "title": "Provisional Value"
+          },
+          "companies": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "type": "array",
+            "title": "Companies"
+          },
+          "economic_companies": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "type": "array",
+            "title": "Economic Companies"
+          },
+          "industries": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "type": "array",
+            "title": "Industries"
+          },
+          "divisions": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "type": "array",
+            "title": "Divisions"
+          },
+          "countries": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "type": "array",
+            "title": "Countries"
+          },
+          "not_looked_through": {
+            "items": {
+              "$ref": "#/components/schemas/NotLookedThroughOut"
+            },
+            "type": "array",
+            "title": "Not Looked Through"
+          },
+          "breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownOut"
+            },
+            "type": "array",
+            "title": "Breakdown"
+          },
+          "fund_report_dates": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "object",
+            "title": "Fund Report Dates"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingOut"
+            },
+            "type": "array",
+            "title": "Holdings"
+          },
+          "exposure": {
+            "items": {
+              "$ref": "#/components/schemas/ExposureBarOut"
+            },
+            "type": "array",
+            "title": "Exposure"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/FlagOut"
+            },
+            "type": "array",
+            "title": "Flags"
+          },
+          "herfindahl": {
+            "items": {
+              "$ref": "#/components/schemas/HerfindahlOut"
+            },
+            "type": "array",
+            "title": "Herfindahl"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "snapshot_as_of",
+          "total_value",
+          "cash",
+          "reconciles",
+          "covered_fraction",
+          "provisional_value",
+          "companies",
+          "economic_companies",
+          "industries",
+          "divisions",
+          "countries",
+          "not_looked_through",
+          "breakdown",
+          "fund_report_dates",
+          "holdings",
+          "exposure",
+          "flags",
+          "herfindahl",
+          "caveats"
+        ],
+        "title": "ExposureResponse"
+      },
+      "FlagOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          },
+          "threshold": {
+            "type": "string",
+            "title": "Threshold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "basis",
+          "name",
+          "value",
+          "share",
+          "threshold"
+        ],
+        "title": "FlagOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HerfindahlOut": {
+        "properties": {
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          },
+          "hhi": {
+            "type": "string",
+            "title": "Hhi"
+          },
+          "effective_n": {
+            "type": "string",
+            "title": "Effective N"
+          },
+          "companies": {
+            "type": "integer",
+            "title": "Companies"
+          },
+          "covered_fraction": {
+            "type": "string",
+            "title": "Covered Fraction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "basis",
+          "hhi",
+          "effective_n",
+          "companies",
+          "covered_fraction"
+        ],
+        "title": "HerfindahlOut"
+      },
+      "HoldingOut": {
+        "properties": {
+          "holding_id": {
+            "type": "integer",
+            "title": "Holding Id"
+          },
+          "holding": {
+            "type": "string",
+            "title": "Holding"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          },
+          "report_as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report As Of"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "holding_id",
+          "holding",
+          "name",
+          "value",
+          "share",
+          "report_as_of",
+          "segments"
+        ],
+        "title": "HoldingOut"
+      },
+      "Line": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "share"
+        ],
+        "title": "Line"
+      },
+      "NotLookedThroughOut": {
+        "properties": {
+          "holding": {
+            "type": "string",
+            "title": "Holding"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "holding",
+          "label",
+          "value",
+          "share",
+          "reason"
+        ],
+        "title": "NotLookedThroughOut"
+      },
+      "SegmentOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "cash",
+              "swap_owed",
+              "unmatched",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "share": {
+            "type": "string",
+            "title": "Share"
+          },
+          "edge_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Id"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional",
+            "default": false
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "label",
+          "value",
+          "share"
+        ],
+        "title": "SegmentOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

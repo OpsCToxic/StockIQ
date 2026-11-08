@@ -1,6 +1,6 @@
 import csv
 
-from stockiq.entities.eval import FIELDS, Scored, gold_path, report, summarise
+from stockiq.entities.eval import FIELDS, Scored, gold_path, report, summarise, unreviewed_scored
 
 
 def _row(name: str, expected: str, reviewed: str = "") -> dict[str, str]:
@@ -47,3 +47,14 @@ def test_the_committed_gold_file_has_the_agreed_columns() -> None:
     assert len(rows) >= 100
     assert all(r["cusip"] for r in rows)
     assert len({r["cusip"] for r in rows}) == len(rows)  # no duplicate mentions
+
+
+def test_the_gate_counts_only_scored_rows_that_lack_a_review() -> None:
+    scored = [
+        Scored(_row("a", "1", "yes"), "1", "A", 0.95, "exact_name"),  # reviewed
+        Scored(_row("b", "2", ""), "2", "B", 0.95, "exact_name"),  # scored, not reviewed
+        Scored(
+            _row("c", "", ""), None, None, 0.0, "none"
+        ),  # no label: never scored, so not counted
+    ]
+    assert unreviewed_scored(scored) == 1

@@ -10,7 +10,8 @@ Sector classification from SEC submissions: each company's SIC code and descript
   override. First run: 473 companies, none skipped, about 2 minutes.
 - **Evidence:** each edge cites the stored document and the JSON exactly as served,
   `"sic":"3571","sicDescription":"Electronic Computers"` (invariant 1).
-- **Point-in-time:** SEC serves only the current SIC, so an edge is known from the fetch time and
+- **Point-in-time:** SEC serves only the current SIC, so an edge's `valid_from` equals its
+  `known_at`, the fetch time: "known from", not "true since". It is known from the fetch time and
   never backdated: an `as_of` before the first fetch shows the company as Unclassified. A changed
   SIC closes the old edge and opens a new one.
 - **Why SIC:** it is the only free classification SEC publishes. GICS is licensed. SIC is coarser

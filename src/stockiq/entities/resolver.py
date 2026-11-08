@@ -14,7 +14,7 @@ link and queue. A name shared by several entities is ambiguous and is never gues
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import Connection, text
@@ -27,6 +27,10 @@ CONF_EXACT_ID = Decimal("1.0")
 CONF_ALIAS = Decimal("0.95")
 FUZZY_CAP = Decimal("0.89")
 FUZZY_FLOOR = Decimal("0.5")  # below this similarity a name is not even a candidate
+CONF_ASSUMED = Decimal("0.85")  # a current ticker projected onto an older document
+ASSUMED_HISTORY_WINDOW = timedelta(days=365)
+# Alias validity when the real start is unknown: dated from the epoch (migration 0011).
+UNKNOWN_START = datetime(1970, 1, 1, tzinfo=UTC)
 FUZZY_MARGIN = Decimal("0.1")  # the best candidate must beat the runner-up by this much
 LEARNED_SOURCE = "nport_name_match"  # identifiers taught by an accepted name match
 # Aliases the system or a reviewer added after seeing real mentions. The evaluation excludes them
@@ -132,33 +136,53 @@ def _by_identifier(
     return None
 
 
+def _reviewed(conn: Connection, kind: str, alias: str, as_of: datetime) -> int | None:
+    """The one entity a reviewer pinned this alias to, if any. A reviewer's decision is exact and
+    beats the canonical aliases, which is how an ambiguous name gets settled for good."""
+    ids = (
+        conn.execute(
+            text(
+                "SELECT DISTINCT entity_id FROM entity_alias "
+                "WHERE kind = :k AND alias = :a AND source = 'review' AND valid_to IS NULL "
+                "AND valid_from <= :at"
+            ),
+            {"k": kind, "a": alias, "at": as_of},
+        )
+        .scalars()
+        .all()
+    )
+    return ids[0] if len(ids) == 1 else None
+
+
 def _by_ticker(
     conn: Connection, m: Mention, as_of: datetime, use_learned: bool
 ) -> Resolution | None:
     if not m.ticker:
         return None
-    ids = (
-        conn.execute(
-            text(
-                """
-                SELECT DISTINCT entity_id FROM entity_alias
-                WHERE kind = 'ticker' AND alias = :t AND valid_from <= :at
-                  AND (valid_to IS NULL OR valid_to > :at)
-                  AND (CAST(:ul AS boolean) OR source <> ALL(:taught))
-                """
-            ),
-            {
-                "t": m.ticker.upper(),
-                "at": as_of,
-                "ul": use_learned,
-                "taught": list(TAUGHT_SOURCES),
-            },
-        )
-        .scalars()
-        .all()
-    )
-    if len(ids) == 1:
-        return Resolution(ids[0], CONF_ALIAS, "ticker")
+    ticker = m.ticker.upper()
+    if use_learned and (pinned := _reviewed(conn, "ticker", ticker, as_of)) is not None:
+        return Resolution(pinned, CONF_EXACT_ID, "reviewed_ticker")
+    rows = conn.execute(
+        text(
+            """
+            SELECT entity_id, min(valid_from) AS vf, min(known_at) AS ka FROM entity_alias
+            WHERE kind = 'ticker' AND alias = :t AND valid_from <= :at
+              AND (valid_to IS NULL OR valid_to > :at)
+              AND (CAST(:ul AS boolean) OR source <> ALL(:taught))
+            GROUP BY entity_id
+            """
+        ),
+        {"t": ticker, "at": as_of, "ul": use_learned, "taught": list(TAUGHT_SOURCES)},
+    ).all()
+    ids = [r.entity_id for r in rows]
+    if len(rows) == 1:
+        r = rows[0]
+        # The SEC files have no ticker history, so a first-seed alias says "this is who holds the
+        # ticker now". For a document well before we learned that, it is an assumption: link it
+        # provisionally and let a reviewer confirm, instead of calling it certain.
+        if r.vf <= UNKNOWN_START and as_of < r.ka - ASSUMED_HISTORY_WINDOW:
+            return Resolution(r.entity_id, CONF_ASSUMED, "ticker:assumed_history")
+        return Resolution(r.entity_id, CONF_ALIAS, "ticker")
     if len(ids) > 1:
         names = _entities(conn, list(ids))
         return Resolution(
@@ -176,6 +200,8 @@ def _by_exact_name(
     norm = normalize_name(m.name or "")
     if not norm:
         return None
+    if use_learned and (pinned := _reviewed(conn, "name", norm, as_of)) is not None:
+        return Resolution(pinned, CONF_EXACT_ID, "reviewed_name")
     ids = (
         conn.execute(
             text(

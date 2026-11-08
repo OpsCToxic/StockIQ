@@ -13,7 +13,9 @@ Imports the positions CSV from E*TRADE (Portfolio > Download). Manual, no API ac
   `Price Paid $` is rounded to 4 places, so quantity times price drifts by a few cents.
 - **Cash:** goes to `cash_balance`, so portfolio totals reconcile with E*TRADE's.
 - **Safety checks (the import aborts, nothing is written):** footer missing; positions plus cash do
-  not equal the file's `TOTAL` (tolerance 5 cents); a symbol maps to zero or several entities.
+  not equal the file's `TOTAL` (tolerance 5 cents); a symbol is not matched to exactly one
+  entity by the resolver. Unmatched symbols are queued for review (`python -m
+  stockiq.entities.review list`); accept the item with the right entity id and import again.
 - **Idempotent:** the document key is the snapshot time plus a content hash; rows upsert on
   account, security and `as_of`. Re-importing the same file changes nothing.
 - **Corrections:** re-importing a corrected file for the same snapshot overwrites values but keeps

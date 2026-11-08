@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Connection, text
 
 from stockiq.entities.names import normalize_name
-from stockiq.entities.resolver import Mention, Resolution
+from stockiq.entities.resolver import TAUGHT_SOURCES, UNKNOWN_START, Mention, Resolution
 
 REVIEW_SOURCE = "review"
 
@@ -89,26 +89,37 @@ def accept(conn: Connection, queue_id: int, entity_id: int) -> None:
     if mention.get("ticker"):
         aliases.append(("ticker", mention["ticker"].upper()))
     for kind, alias in aliases:
-        # The curated alias replaces any open one with the same value: if the resolver had it
-        # pointing at another entity, that was wrong, and a human just said so.
+        # Only aliases the system itself taught or a reviewer set can be corrected here. The
+        # canonical aliases (SEC tickers, normalised entity names) belong to other entities and
+        # are never closed: closing one would stop that company matching by name at all. A review
+        # alias wins over them in the resolver instead (it is exact and curated).
         conn.execute(
             text(
                 "UPDATE entity_alias SET valid_to = :n WHERE kind = :k AND alias = :a "
-                "AND valid_to IS NULL AND entity_id <> :e AND source <> 'sec_company_tickers'"
+                "AND valid_to IS NULL AND entity_id <> :e AND source = ANY(:taught)"
             ),
-            {"n": now, "k": kind, "a": alias, "e": entity_id},
+            {"n": now, "k": kind, "a": alias, "e": entity_id, "taught": list(TAUGHT_SOURCES)},
         )
+        # valid_from is the unknown start, so the decision also applies when an older filing is
+        # re-parsed; known_at is now, because that is when we learned it.
         conn.execute(
             text(
                 """
                 INSERT INTO entity_alias (entity_id, alias, kind, source, valid_from, known_at)
-                SELECT :e, :a, :k, :src, :n, :n
+                SELECT :e, :a, :k, :src, :vf, :n
                 WHERE NOT EXISTS (
                     SELECT 1 FROM entity_alias WHERE entity_id = :e AND alias = :a AND kind = :k
                       AND source = :src AND valid_to IS NULL)
                 """
             ),
-            {"e": entity_id, "a": alias, "k": kind, "src": REVIEW_SOURCE, "n": now},
+            {
+                "e": entity_id,
+                "a": alias,
+                "k": kind,
+                "src": REVIEW_SOURCE,
+                "vf": UNKNOWN_START,
+                "n": now,
+            },
         )
     conn.execute(
         text(
